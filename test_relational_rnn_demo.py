@@ -1,12 +1,12 @@
 """
-Demonstration of Relational RNN Cell - Extended Testing
+關係 RNN 單元（Relational RNN Cell）展示 - 擴展測試
 
-This script provides additional visualizations and tests to demonstrate:
-1. How memory evolves over a sequence
-2. How LSTM and memory interact
-3. Comparison of outputs with and without memory
+此腳本提供額外的視覺化和測試，用以展示：
+1. 記憶如何隨序列演化
+2. LSTM 和記憶如何交互
+3. 有記憶和無記憶輸出的比較
 
-Paper 18: Relational RNN - Task P2-T2 Demo
+論文 18：Relational RNN - 任務 P2-T2 展示
 """
 
 import numpy as np
@@ -15,15 +15,15 @@ from lstm_baseline import LSTM
 
 
 def analyze_memory_evolution():
-    """Detailed analysis of how memory evolves over a sequence."""
+    """詳細分析記憶如何隨序列演化。"""
     print("=" * 80)
     print("Analyzing Memory Evolution Over Sequence")
     print("=" * 80)
 
     np.random.seed(42)
 
-    # Configuration
-    batch_size = 1  # Single example for clarity
+    # 配置
+    batch_size = 1  # 單一範例以便清晰展示
     seq_len = 15
     input_size = 32
     hidden_size = 64
@@ -35,7 +35,7 @@ def analyze_memory_evolution():
     print(f"  Memory slots: {num_slots}")
     print(f"  Slot size: {slot_size}")
 
-    # Create cell
+    # 建立單元
     cell = RelationalRNNCell(
         input_size=input_size,
         hidden_size=hidden_size,
@@ -44,30 +44,30 @@ def analyze_memory_evolution():
         num_heads=2
     )
 
-    # Create sequence with pattern
-    # First half: small values, second half: large values
+    # 建立具有模式的序列
+    # 前半部分：小數值；後半部分：大數值
     sequence = np.random.randn(batch_size, seq_len, input_size) * 0.1
-    sequence[:, seq_len//2:, :] *= 5.0  # Increase magnitude in second half
+    sequence[:, seq_len//2:, :] *= 5.0  # 在後半部分增加數值量級
 
     print(f"\n[Analysis] Processing sequence and tracking memory...")
 
-    # Initialize states
+    # 初始化狀態
     h = np.zeros((hidden_size, batch_size))
     c = np.zeros((hidden_size, batch_size))
     memory = cell.init_memory(batch_size)
 
-    # Track memory statistics
+    # 追蹤記憶統計資訊
     memory_norms = []
     memory_means = []
     memory_stds = []
-    slot_norms = []  # Track each slot separately
+    slot_norms = []  # 分別追蹤每個槽位
 
-    # Process sequence
+    # 處理序列
     for t in range(seq_len):
         x_t = sequence[:, t, :]
         output, h, c, memory = cell.forward(x_t, h, c, memory)
 
-        # Compute statistics
+        # 計算統計資訊
         memory_norm = np.linalg.norm(memory)
         memory_mean = np.mean(memory)
         memory_std = np.std(memory)
@@ -76,7 +76,7 @@ def analyze_memory_evolution():
         memory_means.append(memory_mean)
         memory_stds.append(memory_std)
 
-        # Track individual slot norms
+        # 追蹤個別槽位範數（norm）
         slot_norm = [np.linalg.norm(memory[0, i, :]) for i in range(num_slots)]
         slot_norms.append(slot_norm)
 
@@ -96,13 +96,13 @@ def analyze_memory_evolution():
     print(f"    Middle steps (6-10):  {np.mean(memory_stds[5:10]):.4f}")
     print(f"    Final steps (11-15):  {np.mean(memory_stds[10:]):.4f}")
 
-    # Analyze slot specialization
+    # 分析槽位特化
     print(f"\n  Individual Slot Norms at Final Step:")
     final_slot_norms = slot_norms[-1]
     for i, norm in enumerate(final_slot_norms):
         print(f"    Slot {i}: {norm:.4f}")
 
-    # Check if slots have different magnitudes (indication of specialization)
+    # 檢查槽位是否有不同的量級（特化的指標）
     slot_variance = np.var(final_slot_norms)
     print(f"\n  Slot norm variance: {slot_variance:.4f}")
     if slot_variance > 0.01:
@@ -114,21 +114,21 @@ def analyze_memory_evolution():
 
 
 def compare_with_without_memory():
-    """Compare LSTM alone vs. LSTM with relational memory."""
+    """比較單獨 LSTM 與 LSTM 加關係記憶的效果。"""
     print("=" * 80)
     print("Comparing LSTM vs. LSTM + Relational Memory")
     print("=" * 80)
 
     np.random.seed(42)
 
-    # Configuration
+    # 配置
     batch_size = 2
     seq_len = 10
     input_size = 32
     hidden_size = 64
     output_size = 16
 
-    # Create same sequence for fair comparison
+    # 建立相同序列以進行公平比較
     sequence = np.random.randn(batch_size, seq_len, input_size)
 
     print(f"\nConfiguration:")
@@ -138,12 +138,12 @@ def compare_with_without_memory():
     print(f"  hidden_size: {hidden_size}")
     print(f"  output_size: {output_size}")
 
-    # LSTM baseline
+    # LSTM 基準線
     print(f"\n[1] LSTM Baseline (no relational memory)")
     lstm = LSTM(input_size, hidden_size, output_size)
     lstm_outputs = lstm.forward(sequence, return_sequences=True)
 
-    # Relational RNN
+    # 關係 RNN（Relational RNN）
     print(f"[2] Relational RNN (LSTM + relational memory)")
     rel_rnn = RelationalRNN(
         input_size=input_size,
@@ -155,7 +155,7 @@ def compare_with_without_memory():
     )
     rel_outputs = rel_rnn.forward(sequence, return_sequences=True)
 
-    # Compare outputs
+    # 比較輸出
     print(f"\n[Comparison] Output Statistics:")
     print(f"\n  LSTM Baseline:")
     print(f"    Mean: {lstm_outputs.mean():.4f}")
@@ -169,13 +169,13 @@ def compare_with_without_memory():
     print(f"    Min:  {rel_outputs.min():.4f}")
     print(f"    Max:  {rel_outputs.max():.4f}")
 
-    # Compute difference
+    # 計算差異
     diff = np.abs(lstm_outputs - rel_outputs)
     print(f"\n  Absolute Difference:")
     print(f"    Mean: {diff.mean():.4f}")
     print(f"    Max:  {diff.max():.4f}")
 
-    # Analysis
+    # 分析
     print(f"\n[Analysis]")
     print(f"  - Both models process the same sequence")
     print(f"  - Different random initializations lead to different outputs")
@@ -186,14 +186,14 @@ def compare_with_without_memory():
 
 
 def demonstrate_lstm_memory_interaction():
-    """Show step-by-step how LSTM and memory interact."""
+    """逐步展示 LSTM 和記憶如何交互。"""
     print("=" * 80)
     print("Demonstrating LSTM + Memory Interaction")
     print("=" * 80)
 
     np.random.seed(42)
 
-    # Simple configuration
+    # 簡單配置
     batch_size = 1
     input_size = 8
     hidden_size = 16
@@ -206,7 +206,7 @@ def demonstrate_lstm_memory_interaction():
     print(f"  Num slots: {num_slots}")
     print(f"  Slot size: {slot_size}")
 
-    # Create cell
+    # 建立單元
     cell = RelationalRNNCell(
         input_size=input_size,
         hidden_size=hidden_size,
@@ -215,7 +215,7 @@ def demonstrate_lstm_memory_interaction():
         num_heads=1
     )
 
-    # Initialize states
+    # 初始化狀態
     h = np.zeros((hidden_size, batch_size))
     c = np.zeros((hidden_size, batch_size))
     memory = cell.init_memory(batch_size)
@@ -225,19 +225,19 @@ def demonstrate_lstm_memory_interaction():
     print(f"  LSTM c: all zeros")
     print(f"  Memory: all zeros")
 
-    # Process a few steps
+    # 處理幾個步驟
     num_steps = 3
     for step in range(num_steps):
         print(f"\n[Step {step + 1}]")
 
-        # Create input
+        # 建立輸入
         x = np.random.randn(batch_size, input_size) * 0.5
         print(f"  Input: mean={x.mean():.4f}, std={x.std():.4f}")
 
-        # Forward pass
+        # 前向傳播（Forward Pass）
         output, h_new, c_new, memory_new = cell.forward(x, h, c, memory)
 
-        # Show changes
+        # 顯示變化
         h_change = np.linalg.norm(h_new - h)
         c_change = np.linalg.norm(c_new - c)
         mem_change = np.linalg.norm(memory_new - memory)
@@ -247,7 +247,7 @@ def demonstrate_lstm_memory_interaction():
         print(f"  Memory change:      {mem_change:.4f}")
         print(f"  Output: mean={output.mean():.4f}, std={output.std():.4f}")
 
-        # Update states
+        # 更新狀態
         h = h_new
         c = c_new
         memory = memory_new
@@ -263,21 +263,21 @@ def demonstrate_lstm_memory_interaction():
 
 
 def test_memory_capacity():
-    """Test how different numbers of memory slots affect behavior."""
+    """測試不同記憶槽位數量如何影響行為。"""
     print("=" * 80)
     print("Testing Memory Capacity (Different Number of Slots)")
     print("=" * 80)
 
     np.random.seed(42)
 
-    # Configuration
+    # 配置
     batch_size = 2
     seq_len = 10
     input_size = 32
     hidden_size = 64
     output_size = 16
 
-    # Same sequence for all tests
+    # 所有測試使用相同序列
     sequence = np.random.randn(batch_size, seq_len, input_size)
 
     slot_configs = [1, 2, 4, 8]
@@ -318,13 +318,13 @@ def test_memory_capacity():
 
 
 def main():
-    """Run all demonstrations."""
+    """執行所有展示。"""
     print("\n" + "=" * 80)
     print(" " * 15 + "RELATIONAL RNN - EXTENDED DEMONSTRATIONS")
     print(" " * 20 + "Paper 18: Relational RNN - Task P2-T2")
     print("=" * 80 + "\n")
 
-    # Run demonstrations
+    # 執行展示
     analyze_memory_evolution()
     compare_with_without_memory()
     demonstrate_lstm_memory_interaction()

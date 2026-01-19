@@ -1,7 +1,7 @@
 """
-LSTM Baseline - Usage Demonstration
+LSTM 基準模型 - 使用示範
 
-This script demonstrates how to use the LSTM baseline for various tasks.
+本腳本展示如何將 LSTM 基準模型應用於各種任務。
 """
 
 import numpy as np
@@ -10,14 +10,14 @@ from lstm_baseline import LSTM, LSTMCell
 
 def demo_sequence_classification():
     """
-    Demonstrate LSTM for sequence classification.
-    Task: Classify sequences based on their patterns.
+    展示 LSTM 用於序列分類。
+    任務：根據序列的模式進行分類。
     """
     print("\n" + "="*60)
     print("Demo 1: Sequence Classification")
     print("="*60)
 
-    # Create synthetic data: sequences with different patterns
+    # 建立合成資料：具有不同模式的序列
     batch_size = 4
     seq_len = 20
     input_size = 8
@@ -27,48 +27,48 @@ def demo_sequence_classification():
     print(f"\nTask: Classify {num_classes} different sequence patterns")
     print(f"Sequence length: {seq_len}, Input features: {input_size}")
 
-    # Generate sequences with different patterns
+    # 生成具有不同模式的序列
     sequences = []
     labels = []
 
-    # Pattern 0: Increasing trend
+    # 模式 0：遞增趨勢
     seq0 = np.linspace(0, 1, seq_len).reshape(-1, 1) * np.random.randn(seq_len, input_size) * 0.1
     seq0 = seq0 + np.linspace(0, 1, seq_len).reshape(-1, 1)
     sequences.append(seq0)
     labels.append(0)
 
-    # Pattern 1: Decreasing trend
+    # 模式 1：遞減趨勢
     seq1 = np.linspace(1, 0, seq_len).reshape(-1, 1) * np.random.randn(seq_len, input_size) * 0.1
     seq1 = seq1 + np.linspace(1, 0, seq_len).reshape(-1, 1)
     sequences.append(seq1)
     labels.append(1)
 
-    # Pattern 2: Oscillating
+    # 模式 2：振盪
     seq2 = np.sin(np.linspace(0, 4*np.pi, seq_len)).reshape(-1, 1) * np.ones((seq_len, input_size))
     seq2 = seq2 + np.random.randn(seq_len, input_size) * 0.1
     sequences.append(seq2)
     labels.append(2)
 
-    # Pattern 0 again
+    # 再次使用模式 0
     seq0_2 = np.linspace(0, 1, seq_len).reshape(-1, 1) * np.random.randn(seq_len, input_size) * 0.1
     seq0_2 = seq0_2 + np.linspace(0, 1, seq_len).reshape(-1, 1)
     sequences.append(seq0_2)
     labels.append(0)
 
-    # Stack into batch
+    # 堆疊成批次
     batch = np.stack(sequences, axis=0)  # (batch_size, seq_len, input_size)
 
-    # Create LSTM model
+    # 建立 LSTM 模型
     lstm = LSTM(input_size, hidden_size, output_size=num_classes)
 
-    # Forward pass - get only final output for classification
+    # 前向傳播 - 僅獲取最終輸出用於分類
     outputs = lstm.forward(batch, return_sequences=False)
 
     print(f"\nInput shape: {batch.shape}")
     print(f"Output shape: {outputs.shape}")
     print(f"Expected shape: ({batch_size}, {num_classes})")
 
-    # Apply softmax to get class probabilities
+    # 套用 softmax 取得類別機率
     exp_outputs = np.exp(outputs - np.max(outputs, axis=1, keepdims=True))
     probabilities = exp_outputs / np.sum(exp_outputs, axis=1, keepdims=True)
 
@@ -84,8 +84,8 @@ def demo_sequence_classification():
 
 def demo_sequence_to_sequence():
     """
-    Demonstrate LSTM for sequence-to-sequence tasks.
-    Task: Echo the input sequence with a transformation.
+    展示 LSTM 用於序列到序列任務。
+    任務：對輸入序列進行轉換後輸出。
     """
     print("\n" + "="*60)
     print("Demo 2: Sequence-to-Sequence Processing")
@@ -101,20 +101,20 @@ def demo_sequence_to_sequence():
     print(f"Input sequence length: {seq_len}")
     print(f"Output sequence length: {seq_len}")
 
-    # Create input sequences
+    # 建立輸入序列
     sequences = np.random.randn(batch_size, seq_len, input_size) * 0.5
 
-    # Create LSTM
+    # 建立 LSTM
     lstm = LSTM(input_size, hidden_size, output_size=output_size)
 
-    # Forward pass - get all time step outputs
+    # 前向傳播 - 獲取所有時間步的輸出
     outputs = lstm.forward(sequences, return_sequences=True)
 
     print(f"\nInput shape: {sequences.shape}")
     print(f"Output shape: {outputs.shape}")
     print(f"Expected shape: ({batch_size}, {seq_len}, {output_size})")
 
-    # Show output statistics
+    # 顯示輸出統計資訊
     print(f"\nOutput statistics:")
     print(f"  Mean: {np.mean(outputs):.4f}")
     print(f"  Std: {np.std(outputs):.4f}")
@@ -124,7 +124,7 @@ def demo_sequence_to_sequence():
 
 def demo_state_persistence():
     """
-    Demonstrate how LSTM maintains state across time steps.
+    展示 LSTM 如何跨時間步維持狀態。
     """
     print("\n" + "="*60)
     print("Demo 3: State Persistence and Memory")
@@ -137,22 +137,22 @@ def demo_state_persistence():
 
     print(f"\nDemonstrating how LSTM maintains memory over {seq_len} time steps")
 
-    # Create a sequence with a pattern early on
+    # 建立一個在早期具有模式的序列
     sequence = np.zeros((batch_size, seq_len, input_size))
-    # Set a distinctive pattern in first 5 time steps
+    # 在前 5 個時間步設定一個獨特的模式
     sequence[:, 0:5, :] = 1.0
-    # Rest is zeros
+    # 其餘為零
 
-    # Create LSTM
+    # 建立 LSTM
     lstm = LSTM(input_size, hidden_size, output_size=None)
 
-    # Get all outputs and final state
+    # 獲取所有輸出和最終狀態
     outputs, final_h, final_c = lstm.forward(sequence, return_sequences=True, return_state=True)
 
     print(f"\nInput shape: {sequence.shape}")
     print(f"Output shape: {outputs.shape}")
 
-    # Analyze how the hidden state evolves
+    # 分析隱藏狀態如何演變
     print(f"\nHidden state evolution:")
     print(f"  At t=5 (after pattern):  mean={np.mean(outputs[0, 5, :]):.4f}, std={np.std(outputs[0, 5, :]):.4f}")
     print(f"  At t=15 (middle):         mean={np.mean(outputs[0, 15, :]):.4f}, std={np.std(outputs[0, 15, :]):.4f}")
@@ -167,7 +167,7 @@ def demo_state_persistence():
 
 def demo_initialization_importance():
     """
-    Demonstrate the importance of proper initialization.
+    展示正確初始化的重要性。
     """
     print("\n" + "="*60)
     print("Demo 4: Importance of Initialization")
@@ -178,13 +178,13 @@ def demo_initialization_importance():
     seq_len = 100
     batch_size = 1
 
-    # Create LSTM with proper initialization
+    # 使用正確初始化建立 LSTM
     lstm = LSTM(input_size, hidden_size, output_size=None)
 
-    # Create long sequence
+    # 建立長序列
     sequence = np.random.randn(batch_size, seq_len, input_size) * 0.1
 
-    # Forward pass
+    # 前向傳播
     outputs = lstm.forward(sequence, return_sequences=True)
 
     print(f"\nProcessing long sequence (length={seq_len})")
@@ -198,7 +198,7 @@ def demo_initialization_importance():
     print(f"  Contains NaN: {np.isnan(outputs).any()}")
     print(f"  Contains Inf: {np.isinf(outputs).any()}")
 
-    # Check gradient flow (approximate)
+    # 檢查梯度流（近似）
     output_start = outputs[:, 0:10, :]
     output_end = outputs[:, -10:, :]
 
@@ -213,7 +213,7 @@ def demo_initialization_importance():
 
 def demo_cell_level_usage():
     """
-    Demonstrate using LSTMCell directly for custom loops.
+    展示直接使用 LSTMCell 進行自訂迴圈。
     """
     print("\n" + "="*60)
     print("Demo 5: Using LSTMCell for Custom Processing")
@@ -226,10 +226,10 @@ def demo_cell_level_usage():
     print(f"\nManually stepping through time with LSTMCell")
     print(f"Useful for custom training loops or variable-length sequences")
 
-    # Create cell
+    # 建立 cell（細胞單元）
     cell = LSTMCell(input_size, hidden_size)
 
-    # Initialize states
+    # 初始化狀態
     h = np.zeros((hidden_size, batch_size))
     c = np.zeros((hidden_size, batch_size))
 
@@ -237,13 +237,13 @@ def demo_cell_level_usage():
     print(f"  h shape: {h.shape}, all zeros: {np.allclose(h, 0)}")
     print(f"  c shape: {c.shape}, all zeros: {np.allclose(c, 0)}")
 
-    # Process several time steps
+    # 處理多個時間步
     print(f"\nProcessing 5 time steps:")
     for t in range(5):
-        # Random input
+        # 隨機輸入
         x = np.random.randn(batch_size, input_size) * 0.1
 
-        # Step forward
+        # 前向一步
         h, c = cell.forward(x, h, c)
 
         print(f"  t={t}: h_mean={np.mean(h):.4f}, c_mean={np.mean(c):.4f}")
@@ -259,9 +259,9 @@ if __name__ == "__main__":
     print(" "*15 + "LSTM Baseline - Usage Demonstrations")
     print("="*70)
 
-    np.random.seed(42)  # For reproducibility
+    np.random.seed(42)  # 設定隨機種子以確保可重現性
 
-    # Run all demos
+    # 執行所有展示
     demo_sequence_classification()
     demo_sequence_to_sequence()
     demo_state_persistence()

@@ -1,19 +1,19 @@
 """
-Relational RNN Cell - Combining LSTM with Relational Memory
+關係 RNN 單元 (Relational RNN Cell) - 結合 LSTM 與關係記憶
 
-This module implements a Relational RNN that combines:
-1. Standard LSTM for sequential processing
-2. Relational Memory with multi-head self-attention for relational reasoning
+本模組實作一個結合以下元件的 Relational RNN：
+1. 用於序列處理的標準 LSTM
+2. 使用多頭自注意力進行關係推理的關係記憶
 
-Paper 18: Relational RNN - Implementation Task P2-T2
+論文 18：Relational RNN - 實作任務 P2-T2
 
-Architecture:
-- LSTM processes sequential inputs and maintains hidden/cell states
-- Relational memory maintains a set of memory slots that interact via attention
-- LSTM hidden state is projected and used to update the relational memory
-- Memory readout is combined with LSTM output for final predictions
+架構:
+- LSTM 處理序列輸入並維護隱藏狀態/單元狀態 (hidden/cell states)
+- 關係記憶維護一組透過注意力互動的記憶槽
+- LSTM 隱藏狀態被投影並用於更新關係記憶
+- 記憶讀出 (memory readout) 與 LSTM 輸出結合以產生最終預測
 
-Educational implementation using NumPy only.
+僅使用 NumPy 的教育性實作。
 """
 
 import numpy as np
@@ -23,27 +23,26 @@ from attention_mechanism import multi_head_attention, init_attention_params
 
 class RelationalMemory:
     """
-    Relational memory module using multi-head self-attention.
+    使用多頭自注意力的關係記憶模組。
 
-    The memory consists of a set of slots that interact via attention mechanism.
-    This allows the model to maintain and reason about multiple related pieces
-    of information simultaneously.
+    記憶由一組透過注意力機制互動的槽組成。
+    這允許模型同時維護和推理多個相關的資訊片段。
 
-    Architecture:
-        1. Memory slots interact via multi-head self-attention
-        2. Gate mechanism controls memory updates
-        3. Residual connections preserve information
+    架構:
+        1. 記憶槽透過多頭自注意力互動
+        2. 門機制 (gate mechanism) 控制記憶更新
+        3. 殘差連接保留資訊
     """
 
     def __init__(self, num_slots=4, slot_size=64, num_heads=2, input_size=None):
         """
-        Initialize relational memory.
+        初始化關係記憶。
 
-        Args:
-            num_slots: number of memory slots
-            slot_size: dimension of each memory slot
-            num_heads: number of attention heads
-            input_size: dimension of input to memory (if None, equals slot_size)
+        參數:
+            num_slots: 記憶槽的數量
+            slot_size: 每個記憶槽的維度
+            num_heads: 注意力頭的數量
+            input_size: 輸入到記憶的維度（如果為 None，則等於 slot_size）
         """
         self.num_slots = num_slots
         self.slot_size = slot_size
@@ -53,10 +52,10 @@ class RelationalMemory:
         assert slot_size % num_heads == 0, \
             f"slot_size ({slot_size}) must be divisible by num_heads ({num_heads})"
 
-        # Multi-head attention parameters for memory interaction
+        # 用於記憶互動的多頭注意力參數
         self.attn_params = init_attention_params(slot_size, num_heads)
 
-        # Input projection: project input to memory space
+        # 輸入投影：將輸入投影到記憶空間
         if self.input_size != slot_size:
             self.W_input = xavier_initializer((slot_size, self.input_size))
             self.b_input = np.zeros((slot_size, 1))
@@ -64,38 +63,38 @@ class RelationalMemory:
             self.W_input = None
             self.b_input = None
 
-        # Gate for controlling memory updates
-        # Gates decide how much to update vs. preserve existing memory
+        # 用於控制記憶更新的門
+        # 門決定要更新多少 vs. 保留多少現有記憶
         gate_input_size = slot_size + self.input_size
         self.W_gate = xavier_initializer((slot_size, gate_input_size))
         self.b_gate = np.zeros((slot_size, 1))
 
-        # Update projection: combines attention output with input
+        # 更新投影：結合注意力輸出與輸入
         self.W_update = xavier_initializer((slot_size, slot_size))
         self.b_update = np.zeros((slot_size, 1))
 
     def forward(self, memory_prev, input_vec=None):
         """
-        Update memory using self-attention and optional input.
+        使用自注意力和可選的輸入更新記憶。
 
-        Args:
-            memory_prev: previous memory state, shape (batch, num_slots, slot_size)
-            input_vec: optional input to incorporate, shape (batch, input_size)
+        參數:
+            memory_prev: 先前的記憶狀態，形狀 (batch, num_slots, slot_size)
+            input_vec: 可選的要納入的輸入，形狀 (batch, input_size)
 
-        Returns:
-            memory_new: updated memory, shape (batch, num_slots, slot_size)
+        回傳:
+            memory_new: 更新後的記憶，形狀 (batch, num_slots, slot_size)
 
-        Process:
-            1. Apply multi-head self-attention to memory slots
-            2. If input provided, project it and add to memory
-            3. Apply gated update to control information flow
-            4. Residual connection to preserve existing memory
+        處理流程:
+            1. 對記憶槽應用多頭自注意力
+            2. 如果提供了輸入，投影它並加入記憶
+            3. 應用門控更新以控制資訊流
+            4. 殘差連接以保留現有記憶
         """
         batch_size = memory_prev.shape[0]
 
-        # Step 1: Multi-head self-attention over memory slots
+        # 步驟 1：對記憶槽進行多頭自注意力
         # memory_prev: (batch, num_slots, slot_size)
-        # Self-attention: each slot attends to all other slots
+        # 自注意力：每個槽注意所有其他槽
         attended_memory, attn_weights = multi_head_attention(
             Q=memory_prev,
             K=memory_prev,
@@ -108,12 +107,12 @@ class RelationalMemory:
         )
         # attended_memory: (batch, num_slots, slot_size)
 
-        # Step 2: Project and incorporate input if provided
+        # 步驟 2：如果提供了輸入，則投影並納入
         if input_vec is not None:
             # input_vec: (batch, input_size)
-            # Project to slot_size if needed
+            # 如果需要，投影到 slot_size
             if self.W_input is not None:
-                # Reshape for matrix multiplication
+                # 重塑以進行矩陣乘法
                 # input_vec: (batch, input_size) -> (input_size, batch)
                 input_vec_T = input_vec.T  # (input_size, batch)
                 # W_input @ input_vec_T: (slot_size, batch)
@@ -124,54 +123,54 @@ class RelationalMemory:
                 projected_input = input_vec
             # projected_input: (batch, slot_size)
 
-            # Add projected input to first memory slot
-            # This is a simple way to inject external information
+            # 將投影後的輸入加到第一個記憶槽
+            # 這是注入外部資訊的簡單方法
             attended_memory[:, 0, :] = attended_memory[:, 0, :] + projected_input
 
-        # Step 3: Apply update projection with nonlinearity
-        # Process each slot independently
+        # 步驟 3：應用帶有非線性的更新投影
+        # 獨立處理每個槽
         # attended_memory: (batch, num_slots, slot_size)
-        # Reshape to (batch * num_slots, slot_size) for processing
+        # 重塑為 (batch * num_slots, slot_size) 以進行處理
         attended_flat = attended_memory.reshape(batch_size * self.num_slots, self.slot_size)
         # attended_flat: (batch * num_slots, slot_size) -> (slot_size, batch * num_slots)
         attended_flat_T = attended_flat.T
 
-        # Apply update transformation
+        # 應用更新轉換
         # W_update @ attended_flat_T: (slot_size, batch * num_slots)
         updated_flat_T = np.tanh(self.W_update @ attended_flat_T + self.b_update)
         # updated_flat_T: (slot_size, batch * num_slots) -> (batch * num_slots, slot_size)
         updated_flat = updated_flat_T.T
-        # Reshape back: (batch, num_slots, slot_size)
+        # 重塑回：(batch, num_slots, slot_size)
         updated_memory = updated_flat.reshape(batch_size, self.num_slots, self.slot_size)
 
-        # Step 4: Gated update
+        # 步驟 4：門控更新
         if input_vec is not None:
-            # Compute gate values
-            # For each slot, decide how much to update based on attended memory and input
+            # 計算門值
+            # 對於每個槽，根據注意後的記憶和輸入決定要更新多少
             gates_list = []
             for slot_idx in range(self.num_slots):
-                # Get attended memory for this slot: (batch, slot_size)
+                # 取得此槽的注意後記憶：(batch, slot_size)
                 slot_attended = attended_memory[:, slot_idx, :]  # (batch, slot_size)
 
-                # Concatenate with input for gating decision
+                # 與輸入串接以進行門控決策
                 # gate_input: (batch, slot_size + input_size)
                 gate_input = np.concatenate([slot_attended, input_vec], axis=1)
                 # gate_input: (batch, slot_size + input_size) -> (slot_size + input_size, batch)
                 gate_input_T = gate_input.T
 
-                # Compute gate: (slot_size, batch)
+                # 計算門：(slot_size, batch)
                 gate_T = self._sigmoid(self.W_gate @ gate_input_T + self.b_gate)
                 # gate_T: (slot_size, batch) -> (batch, slot_size)
                 gate = gate_T.T
                 gates_list.append(gate)
 
-            # Stack gates: (batch, num_slots, slot_size)
+            # 堆疊門：(batch, num_slots, slot_size)
             gates = np.stack(gates_list, axis=1)
         else:
-            # No input, use constant gate value
+            # 沒有輸入，使用常數門值
             gates = np.ones((batch_size, self.num_slots, self.slot_size)) * 0.5
 
-        # Step 5: Apply gated residual connection
+        # 步驟 5：應用門控殘差連接
         # memory_new = gate * updated + (1 - gate) * old
         memory_new = gates * updated_memory + (1 - gates) * memory_prev
 
@@ -179,7 +178,7 @@ class RelationalMemory:
 
     @staticmethod
     def _sigmoid(x):
-        """Numerically stable sigmoid function."""
+        """數值穩定的 sigmoid 函式。"""
         return np.where(
             x >= 0,
             1 / (1 + np.exp(-x)),
@@ -189,27 +188,26 @@ class RelationalMemory:
 
 class RelationalRNNCell:
     """
-    Relational RNN Cell combining LSTM with relational memory.
+    結合 LSTM 與關係記憶的關係 RNN 單元。
 
-    This cell processes one time step by:
-    1. Running LSTM on input to get hidden state
-    2. Using LSTM hidden state to update relational memory
-    3. Reading from memory and combining with LSTM output
+    此單元透過以下步驟處理一個時間步：
+    1. 對輸入執行 LSTM 以獲得隱藏狀態
+    2. 使用 LSTM 隱藏狀態更新關係記憶
+    3. 從記憶讀取並與 LSTM 輸出結合
 
-    The combination allows both sequential processing (LSTM) and
-    relational reasoning (memory with attention).
+    這種組合允許序列處理（LSTM）和關係推理（帶注意力的記憶）兩者並行。
     """
 
     def __init__(self, input_size, hidden_size, num_slots=4, slot_size=64, num_heads=2):
         """
-        Initialize Relational RNN Cell.
+        初始化關係 RNN 單元。
 
-        Args:
-            input_size: dimension of input features
-            hidden_size: dimension of LSTM hidden state
-            num_slots: number of relational memory slots
-            slot_size: dimension of each memory slot
-            num_heads: number of attention heads for memory
+        參數:
+            input_size: 輸入特徵的維度
+            hidden_size: LSTM 隱藏狀態的維度
+            num_slots: 關係記憶槽的數量
+            slot_size: 每個記憶槽的維度
+            num_heads: 記憶注意力頭的數量
         """
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -217,78 +215,78 @@ class RelationalRNNCell:
         self.slot_size = slot_size
         self.num_heads = num_heads
 
-        # LSTM cell for sequential processing
+        # 用於序列處理的 LSTM 單元
         self.lstm_cell = LSTMCell(input_size, hidden_size)
 
-        # Relational memory with attention
+        # 帶有注意力的關係記憶
         self.memory = RelationalMemory(
             num_slots=num_slots,
             slot_size=slot_size,
             num_heads=num_heads,
-            input_size=hidden_size  # Memory receives LSTM hidden state
+            input_size=hidden_size  # 記憶接收 LSTM 隱藏狀態
         )
 
-        # Projection from memory to output contribution
-        # Read from memory by mean pooling across slots
+        # 從記憶到輸出貢獻的投影
+        # 透過跨槽平均池化從記憶讀取
         self.W_memory_read = xavier_initializer((hidden_size, slot_size))
         self.b_memory_read = np.zeros((hidden_size, 1))
 
-        # Combine LSTM output and memory readout
+        # 結合 LSTM 輸出和記憶讀出
         self.W_combine = xavier_initializer((hidden_size, hidden_size * 2))
         self.b_combine = np.zeros((hidden_size, 1))
 
     def forward(self, x, h_prev, c_prev, memory_prev):
         """
-        Forward pass for one time step.
+        一個時間步的前向傳播。
 
-        Args:
-            x: input, shape (batch, input_size)
-            h_prev: previous LSTM hidden state, shape (hidden_size, batch) or (batch, hidden_size)
-            c_prev: previous LSTM cell state, shape (hidden_size, batch) or (batch, hidden_size)
-            memory_prev: previous memory, shape (batch, num_slots, slot_size)
+        參數:
+            x: 輸入，形狀 (batch, input_size)
+            h_prev: 先前的 LSTM 隱藏狀態，形狀 (hidden_size, batch) 或 (batch, hidden_size)
+            c_prev: 先前的 LSTM 單元狀態，形狀 (hidden_size, batch) 或 (batch, hidden_size)
+            memory_prev: 先前的記憶，形狀 (batch, num_slots, slot_size)
 
-        Returns:
-            output: combined output, shape (batch, hidden_size)
-            h_new: new LSTM hidden state, shape (hidden_size, batch)
-            c_new: new LSTM cell state, shape (hidden_size, batch)
-            memory_new: new memory state, shape (batch, num_slots, slot_size)
+        回傳:
+            output: 結合後的輸出，形狀 (batch, hidden_size)
+            h_new: 新的 LSTM 隱藏狀態，形狀 (hidden_size, batch)
+            c_new: 新的 LSTM 單元狀態，形狀 (hidden_size, batch)
+            memory_new: 新的記憶狀態，形狀 (batch, num_slots, slot_size)
 
-        Process:
-            1. LSTM forward pass: x -> h_new, c_new
-            2. Use h_new to update memory: h_new -> memory_new
-            3. Read from memory (mean pool across slots)
-            4. Combine LSTM hidden state with memory readout
+        處理流程:
+            1. LSTM 前向傳播：x -> h_new, c_new
+            2. 使用 h_new 更新記憶：h_new -> memory_new
+            3. 從記憶讀取（跨槽平均池化）
+            4. 將 LSTM 隱藏狀態與記憶讀出結合
         """
         batch_size = x.shape[0]
 
-        # Handle input shape for h_prev and c_prev
-        # LSTM expects (hidden_size, batch)
+        # 處理 h_prev 和 c_prev 的輸入形狀
+        # LSTM 預期 (hidden_size, batch)
         if h_prev.ndim == 2 and h_prev.shape[0] == batch_size:
-            # Convert (batch, hidden_size) -> (hidden_size, batch)
+            # 轉換 (batch, hidden_size) -> (hidden_size, batch)
             h_prev = h_prev.T
         if c_prev.ndim == 2 and c_prev.shape[0] == batch_size:
-            # Convert (batch, hidden_size) -> (hidden_size, batch)
+            # 轉換 (batch, hidden_size) -> (hidden_size, batch)
             c_prev = c_prev.T
 
-        # Step 1: LSTM forward pass
+        # 步驟 1：LSTM 前向傳播
         # x: (batch, input_size)
         # h_prev, c_prev: (hidden_size, batch)
         h_new, c_new = self.lstm_cell.forward(x, h_prev, c_prev)
         # h_new, c_new: (hidden_size, batch)
 
-        # Step 2: Update relational memory using LSTM hidden state
+        # 步驟 2：使用 LSTM 隱藏狀態更新關係記憶
         # h_new: (hidden_size, batch) -> (batch, hidden_size)
         h_new_for_memory = h_new.T
 
-        # Update memory with LSTM hidden state as input
+        # 以 LSTM 隱藏狀態作為輸入更新記憶
         memory_new = self.memory.forward(memory_prev, h_new_for_memory)
         # memory_new: (batch, num_slots, slot_size)
 
-        # Step 3: Read from memory
-        # Simple strategy: mean pool across memory slots
+        # 步驟 3：從記憶讀取
+        # 簡單策略：跨記憶槽平均池化
         memory_readout = np.mean(memory_new, axis=1)  # (batch, slot_size)
 
-        # Project memory readout to hidden_size
+        # 將記憶讀出投影到 hidden_size
         # memory_readout: (batch, slot_size) -> (slot_size, batch)
         memory_readout_T = memory_readout.T
         # W_memory_read @ memory_readout_T: (hidden_size, batch)
@@ -296,15 +294,15 @@ class RelationalRNNCell:
         # memory_contribution: (batch, hidden_size)
         memory_contribution = memory_contribution_T.T
 
-        # Step 4: Combine LSTM hidden state with memory contribution
+        # 步驟 4：將 LSTM 隱藏狀態與記憶貢獻結合
         # h_new: (hidden_size, batch) -> (batch, hidden_size)
         h_new_batch_first = h_new.T
 
-        # Concatenate LSTM hidden and memory contribution
+        # 串接 LSTM 隱藏狀態和記憶貢獻
         combined_input = np.concatenate([h_new_batch_first, memory_contribution], axis=1)
         # combined_input: (batch, hidden_size * 2)
 
-        # Apply combination layer
+        # 應用組合層
         # combined_input: (batch, hidden_size * 2) -> (hidden_size * 2, batch)
         combined_input_T = combined_input.T
         # W_combine @ combined_input_T: (hidden_size, batch)
@@ -316,35 +314,35 @@ class RelationalRNNCell:
 
     def init_memory(self, batch_size):
         """
-        Initialize memory to zeros.
+        將記憶初始化為零。
 
-        Args:
-            batch_size: batch size
+        參數:
+            batch_size: 批次大小
 
-        Returns:
-            memory: initialized memory, shape (batch, num_slots, slot_size)
+        回傳:
+            memory: 初始化後的記憶，形狀 (batch, num_slots, slot_size)
         """
         return np.zeros((batch_size, self.num_slots, self.slot_size))
 
 
 class RelationalRNN:
     """
-    Full Relational RNN for sequence processing.
+    用於序列處理的完整 Relational RNN。
 
-    Processes sequences using RelationalRNNCell and projects to output space.
+    使用 RelationalRNNCell 處理序列並投影到輸出空間。
     """
 
     def __init__(self, input_size, hidden_size, output_size, num_slots=4, slot_size=64, num_heads=2):
         """
-        Initialize Relational RNN.
+        初始化 Relational RNN。
 
-        Args:
-            input_size: dimension of input features
-            hidden_size: dimension of LSTM hidden state
-            output_size: dimension of output
-            num_slots: number of memory slots
-            slot_size: dimension of each memory slot
-            num_heads: number of attention heads
+        參數:
+            input_size: 輸入特徵的維度
+            hidden_size: LSTM 隱藏狀態的維度
+            output_size: 輸出的維度
+            num_slots: 記憶槽的數量
+            slot_size: 每個記憶槽的維度
+            num_heads: 注意力頭的數量
         """
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -353,7 +351,7 @@ class RelationalRNN:
         self.slot_size = slot_size
         self.num_heads = num_heads
 
-        # Relational RNN cell
+        # 關係 RNN 單元
         self.cell = RelationalRNNCell(
             input_size=input_size,
             hidden_size=hidden_size,
@@ -362,46 +360,46 @@ class RelationalRNN:
             num_heads=num_heads
         )
 
-        # Output projection layer
+        # 輸出投影層
         self.W_out = xavier_initializer((output_size, hidden_size))
         self.b_out = np.zeros((output_size, 1))
 
     def forward(self, sequence, return_sequences=True, return_state=False):
         """
-        Process a sequence through the Relational RNN.
+        通過 Relational RNN 處理序列。
 
-        Args:
-            sequence: input sequence, shape (batch, seq_len, input_size)
-            return_sequences: if True, return outputs for all time steps
-            return_state: if True, return final states
+        參數:
+            sequence: 輸入序列，形狀 (batch, seq_len, input_size)
+            return_sequences: 如果為 True，回傳所有時間步的輸出
+            return_state: 如果為 True，回傳最終狀態
 
-        Returns:
-            outputs: shape (batch, seq_len, output_size) if return_sequences
-                    else (batch, output_size)
-            If return_state=True, also returns (h_final, c_final, memory_final)
+        回傳:
+            outputs: 如果 return_sequences 為 True，形狀 (batch, seq_len, output_size)
+                    否則形狀 (batch, output_size)
+            如果 return_state=True，還會回傳 (h_final, c_final, memory_final)
         """
         batch_size, seq_len, _ = sequence.shape
 
-        # Initialize states
+        # 初始化狀態
         h = np.zeros((self.hidden_size, batch_size))
         c = np.zeros((self.hidden_size, batch_size))
         memory = self.cell.init_memory(batch_size)
 
-        # Store outputs
+        # 儲存輸出
         outputs = []
 
-        # Process sequence
+        # 處理序列
         for t in range(seq_len):
-            # Get input at time t
+            # 取得時間 t 的輸入
             x_t = sequence[:, t, :]  # (batch, input_size)
 
-            # Forward pass through cell
+            # 通過單元的前向傳播
             cell_output, h, c, memory = self.cell.forward(x_t, h, c, memory)
             # cell_output: (batch, hidden_size)
             # h, c: (hidden_size, batch)
             # memory: (batch, num_slots, slot_size)
 
-            # Project to output space
+            # 投影到輸出空間
             # cell_output: (batch, hidden_size) -> (hidden_size, batch)
             cell_output_T = cell_output.T
             # W_out @ cell_output_T: (output_size, batch)
@@ -411,14 +409,14 @@ class RelationalRNN:
 
             outputs.append(out_t)
 
-        # Prepare return values
+        # 準備回傳值
         if return_sequences:
             result = np.stack(outputs, axis=1)  # (batch, seq_len, output_size)
         else:
             result = outputs[-1]  # (batch, output_size)
 
         if return_state:
-            # Return states in batch-first format
+            # 以 batch-first 格式回傳狀態
             h_final = h.T  # (batch, hidden_size)
             c_final = c.T  # (batch, hidden_size)
             memory_final = memory  # (batch, num_slots, slot_size)
@@ -428,11 +426,11 @@ class RelationalRNN:
 
 
 # ============================================================================
-# Test Functions
+# 測試函式
 # ============================================================================
 
 def test_relational_memory():
-    """Test the relational memory module."""
+    """測試關係記憶模組。"""
     print("=" * 80)
     print("Testing Relational Memory Module")
     print("=" * 80)
@@ -508,7 +506,7 @@ def test_relational_memory():
 
 
 def test_relational_rnn_cell():
-    """Test the Relational RNN Cell."""
+    """測試關係 RNN 單元。"""
     print("=" * 80)
     print("Testing Relational RNN Cell")
     print("=" * 80)
@@ -601,7 +599,7 @@ def test_relational_rnn_cell():
 
 
 def test_relational_rnn():
-    """Test the full Relational RNN."""
+    """測試完整的 Relational RNN。"""
     print("=" * 80)
     print("Testing Relational RNN (Full Sequence Processor)")
     print("=" * 80)
@@ -725,7 +723,7 @@ def test_relational_rnn():
 
 
 def compare_with_lstm_baseline():
-    """Compare Relational RNN with LSTM baseline."""
+    """比較 Relational RNN 與 LSTM 基準。"""
     print("=" * 80)
     print("Comparison: Relational RNN vs. LSTM Baseline")
     print("=" * 80)
@@ -823,7 +821,7 @@ def compare_with_lstm_baseline():
 
 
 def main():
-    """Run all tests."""
+    """執行所有測試。"""
     print("\n" + "=" * 80)
     print(" " * 15 + "RELATIONAL RNN IMPLEMENTATION TEST SUITE")
     print(" " * 20 + "Paper 18: Relational RNN - Task P2-T2")

@@ -1,9 +1,9 @@
 """
-Training Utilities Demo
-Paper 18: Relational RNN - Task P2-T3
+訓練工具示範程式
+論文 18：Relational RNN - 任務 P2-T3
 
-Demonstrates the training utilities with a simple sequence classification task.
-Shows how to use the training loop, early stopping, and visualization.
+透過簡單的序列分類任務展示訓練工具的使用方式。
+說明如何使用訓練迴圈、早停機制（early stopping）和視覺化功能。
 """
 
 import numpy as np
@@ -20,31 +20,30 @@ from training_utils import (
 def generate_sequence_classification_data(num_samples=500, seq_len=20,
                                          input_size=10, num_classes=3):
     """
-    Generate synthetic sequence classification data.
+    產生合成序列分類資料。
 
-    Task: Classify sequences based on the sum of features in the first half
-    vs second half.
+    任務：根據序列前半部分與後半部分的特徵總和進行分類。
 
-    Args:
-        num_samples: number of sequences to generate
-        seq_len: length of each sequence
-        input_size: number of features per timestep
-        num_classes: number of output classes
+    參數：
+        num_samples: 要產生的序列數量
+        seq_len: 每個序列的長度
+        input_size: 每個時間步的特徵數量
+        num_classes: 輸出類別數量
 
-    Returns:
-        X: (num_samples, seq_len, input_size)
-        y: (num_samples,) - class labels
+    回傳：
+        X: (num_samples, seq_len, input_size) - 輸入序列
+        y: (num_samples,) - 類別標籤
     """
     X = np.random.randn(num_samples, seq_len, input_size)
 
-    # Create meaningful labels based on sequence properties
+    # 根據序列特性建立有意義的標籤
     labels = []
     for i in range(num_samples):
-        # Compute sum of first half vs second half
+        # 計算前半部分與後半部分的總和
         first_half_sum = np.sum(X[i, :seq_len//2, :])
         second_half_sum = np.sum(X[i, seq_len//2:, :])
 
-        # Classify based on the difference
+        # 根據差值進行分類
         diff = second_half_sum - first_half_sum
 
         if diff < -5:
@@ -62,15 +61,15 @@ def generate_sequence_classification_data(num_samples=500, seq_len=20,
 
 
 def demo_basic_training():
-    """Demonstrate basic training with LSTM."""
+    """展示使用 LSTM 進行基本訓練。"""
     print("=" * 80)
     print("Demo 1: Basic LSTM Training on Sequence Classification")
     print("=" * 80)
 
-    # Set random seed
+    # 設定隨機種子
     np.random.seed(42)
 
-    # Generate data
+    # 產生資料
     print("\nGenerating synthetic sequence classification data...")
     X_train, y_train = generate_sequence_classification_data(
         num_samples=400, seq_len=20, input_size=8, num_classes=3
@@ -86,13 +85,13 @@ def demo_basic_training():
     print(f"Val set: {X_val.shape}, {y_val.shape}")
     print(f"Test set: {X_test.shape}, {y_test.shape}")
 
-    # Class distribution
+    # 類別分布
     print("\nClass distribution (train):")
     for i in range(3):
         count = np.sum(y_train == i)
         print(f"  Class {i}: {count} samples ({count/len(y_train)*100:.1f}%)")
 
-    # Create model
+    # 建立模型
     print("\nCreating LSTM model...")
     input_size = 8
     hidden_size = 32
@@ -101,12 +100,12 @@ def demo_basic_training():
     model = LSTM(input_size, hidden_size, output_size)
     print(f"Model: LSTM(input={input_size}, hidden={hidden_size}, output={output_size})")
 
-    # Count parameters
+    # 計算參數數量
     params = model.get_params()
     total_params = sum(p.size for p in params.values())
     print(f"Total parameters: {total_params:,}")
 
-    # Train model
+    # 訓練模型
     print("\nTraining model...")
     print("-" * 80)
 
@@ -125,14 +124,14 @@ def demo_basic_training():
         verbose=True
     )
 
-    # Evaluate on test set
+    # 在測試集上評估
     print("\n" + "=" * 80)
     print("Evaluating on test set...")
     test_loss, test_acc = evaluate(model, X_test, y_test, task='classification')
     print(f"Test Loss: {test_loss:.4f}")
     print(f"Test Accuracy: {test_acc:.4f}")
 
-    # Print training summary
+    # 輸出訓練摘要
     print("\n" + "=" * 80)
     print("Training Summary")
     print("=" * 80)
@@ -144,7 +143,7 @@ def demo_basic_training():
     print(f"Final val accuracy: {history['val_metric'][-1]:.4f}")
     print(f"Test accuracy: {test_acc:.4f}")
 
-    # Plot training curves
+    # 繪製訓練曲線
     print("\nGenerating training curves...")
     plot_training_curves(history)
 
@@ -152,15 +151,15 @@ def demo_basic_training():
 
 
 def demo_overfitting_detection():
-    """Demonstrate early stopping to prevent overfitting."""
+    """展示使用早停機制防止過度擬合。"""
     print("\n" + "=" * 80)
     print("Demo 2: Early Stopping - Detecting Overfitting")
     print("=" * 80)
 
-    # Set random seed
+    # 設定隨機種子
     np.random.seed(42)
 
-    # Generate small dataset to encourage overfitting
+    # 產生小型資料集以促進過度擬合
     print("\nGenerating small dataset (encourages overfitting)...")
     X_train, y_train = generate_sequence_classification_data(
         num_samples=50, seq_len=15, input_size=5, num_classes=3
@@ -172,11 +171,11 @@ def demo_overfitting_detection():
     print(f"Train set: {X_train.shape} (small)")
     print(f"Val set: {X_val.shape}")
 
-    # Create larger model (more prone to overfitting)
+    # 建立較大的模型（更容易過度擬合）
     print("\nCreating large model (prone to overfitting)...")
     model = LSTM(input_size=5, hidden_size=64, output_size=3)
 
-    # Train with early stopping
+    # 使用早停機制進行訓練
     print("\nTraining with early stopping (patience=5)...")
     print("-" * 80)
 
@@ -184,15 +183,15 @@ def demo_overfitting_detection():
         model,
         train_data=(X_train, y_train),
         val_data=(X_val, y_val),
-        epochs=50,  # Allow many epochs
+        epochs=50,  # 允許較多的訓練週期
         batch_size=16,
         learning_rate=0.02,
-        patience=5,  # Stop if no improvement for 5 epochs
+        patience=5,  # 若連續 5 個週期無改善則停止
         task='classification',
         verbose=True
     )
 
-    # Analyze results
+    # 分析結果
     print("\n" + "=" * 80)
     print("Overfitting Analysis")
     print("=" * 80)
@@ -200,7 +199,7 @@ def demo_overfitting_detection():
     print(f"Final train loss: {history['train_loss'][-1]:.4f}")
     print(f"Final val loss: {history['val_loss'][-1]:.4f}")
 
-    # Check for overfitting signs
+    # 檢查過度擬合的跡象
     train_val_gap = history['train_metric'][-1] - history['val_metric'][-1]
     print(f"\nTrain accuracy: {history['train_metric'][-1]:.4f}")
     print(f"Val accuracy: {history['val_metric'][-1]:.4f}")
@@ -215,14 +214,14 @@ def demo_overfitting_detection():
 
 
 def demo_learning_rate_schedule():
-    """Demonstrate effect of learning rate schedule."""
+    """展示學習率排程的效果。"""
     print("\n" + "=" * 80)
     print("Demo 3: Learning Rate Schedule Effects")
     print("=" * 80)
 
     np.random.seed(42)
 
-    # Generate data
+    # 產生資料
     X_train, y_train = generate_sequence_classification_data(
         num_samples=200, seq_len=15, input_size=6, num_classes=3
     )
@@ -230,7 +229,7 @@ def demo_learning_rate_schedule():
         num_samples=50, seq_len=15, input_size=6, num_classes=3
     )
 
-    # Train with aggressive LR decay
+    # 使用積極的學習率衰減進行訓練
     print("\nTraining with aggressive LR decay (0.9 every 3 epochs)...")
     model1 = LSTM(input_size=6, hidden_size=24, output_size=3)
 
@@ -261,14 +260,14 @@ def demo_learning_rate_schedule():
 
 
 def demo_gradient_clipping():
-    """Demonstrate gradient clipping for stability."""
+    """展示梯度裁剪以確保訓練穩定性。"""
     print("\n" + "=" * 80)
     print("Demo 4: Gradient Clipping for Training Stability")
     print("=" * 80)
 
     np.random.seed(42)
 
-    # Generate data
+    # 產生資料
     X_train, y_train = generate_sequence_classification_data(
         num_samples=100, seq_len=20, input_size=8, num_classes=3
     )
@@ -312,7 +311,7 @@ def demo_gradient_clipping():
 
 
 def main():
-    """Run all demonstrations."""
+    """執行所有示範。"""
     print("\n" + "=" * 80)
     print(" " * 20 + "TRAINING UTILITIES DEMONSTRATION")
     print(" " * 18 + "Paper 18: Relational RNN - Task P2-T3")
@@ -324,7 +323,7 @@ def main():
     print("  4. Gradient clipping for stability")
     print("=" * 80)
 
-    # Run demos
+    # 執行各項示範
     demo_basic_training()
     demo_overfitting_detection()
     demo_learning_rate_schedule()

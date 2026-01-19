@@ -1,17 +1,15 @@
 """
-Relational Memory Core Module
-Paper 18: Relational RNN - Implementation Task P2-T1
+關係記憶核心模組 (Relational Memory Core Module)
+論文 18：Relational RNN - 實作任務 P2-T1
 
-This module implements the core innovation of the Relational RNN paper:
-a set of memory slots that interact via multi-head self-attention to enable
-relational reasoning across stored information.
+本模組實作 Relational RNN 論文的核心創新：
+一組透過多頭自注意力 (multi-head self-attention) 互動的記憶槽 (memory slots)，
+用於在儲存的資訊之間進行關係推理 (relational reasoning)。
 
-The Relational Memory Core maintains a set of memory vectors (slots) that
-can attend to each other, allowing information sharing and relational
-reasoning. This is the key difference from traditional RNNs that use a
-single hidden state vector.
+關係記憶核心維護一組可以互相注意 (attend) 的記憶向量（槽），
+允許資訊共享和關係推理。這是與傳統 RNN 使用單一隱藏狀態向量的關鍵差異。
 
-Educational implementation for the Sutskever 30 papers project.
+這是 Sutskever 30 篇論文專案的教育性實作。
 """
 
 import numpy as np
@@ -20,37 +18,36 @@ from attention_mechanism import multi_head_attention, init_attention_params
 
 def layer_norm(x, gamma=None, beta=None, eps=1e-6):
     """
-    Layer Normalization.
+    層正規化 (Layer Normalization)。
 
-    Normalizes across the feature dimension for each example independently.
-    This helps stabilize training and allows each layer to adapt its inputs
-    to have zero mean and unit variance.
+    對每個樣本獨立地在特徵維度上進行正規化。
+    這有助於穩定訓練，並使每一層能夠將其輸入調整為零均值和單位方差。
 
-    Args:
-        x: input tensor, shape (..., d_model)
-        gamma: scale parameter, shape (d_model,)
-        beta: shift parameter, shape (d_model,)
-        eps: small constant for numerical stability
+    參數:
+        x: 輸入張量，形狀 (..., d_model)
+        gamma: 縮放參數 (scale parameter)，形狀 (d_model,)
+        beta: 偏移參數 (shift parameter)，形狀 (d_model,)
+        eps: 用於數值穩定性的小常數
 
-    Returns:
-        normalized output, shape (..., d_model)
+    回傳:
+        正規化後的輸出，形狀 (..., d_model)
 
-    Mathematical formulation:
+    數學公式:
         mean = mean(x, axis=-1, keepdims=True)
         var = var(x, axis=-1, keepdims=True)
         x_norm = (x - mean) / sqrt(var + eps)
         output = gamma * x_norm + beta
     """
-    # Compute mean and variance across the last dimension (feature dimension)
+    # 計算最後一個維度（特徵維度）的均值和方差
     mean = np.mean(x, axis=-1, keepdims=True)
     var = np.var(x, axis=-1, keepdims=True)
 
-    # Normalize
+    # 正規化
     x_norm = (x - mean) / np.sqrt(var + eps)
 
-    # Scale and shift if parameters provided
+    # 如果提供了參數，則進行縮放和偏移
     if gamma is not None and beta is not None:
-        # Ensure gamma and beta have the right shape for broadcasting
+        # 確保 gamma 和 beta 具有正確的形狀以進行廣播 (broadcasting)
         assert gamma.shape[-1] == x.shape[-1], \
             f"gamma shape {gamma.shape} incompatible with x shape {x.shape}"
         assert beta.shape[-1] == x.shape[-1], \
@@ -63,28 +60,27 @@ def layer_norm(x, gamma=None, beta=None, eps=1e-6):
 
 def gated_update(old_value, new_value, gate_weights=None):
     """
-    Gated update mechanism for memory.
+    記憶的門控更新機制 (Gated Update Mechanism)。
 
-    Uses a learned gate to interpolate between old and new memory values.
-    This allows the model to learn when to retain old information vs.
-    incorporate new information.
+    使用學習到的門來在舊記憶值和新記憶值之間進行內插。
+    這允許模型學習何時保留舊資訊，何時納入新資訊。
 
-    Args:
-        old_value: previous memory, shape (..., d_model)
-        new_value: candidate new memory, shape (..., d_model)
-        gate_weights: optional gate parameters, shape (d_model * 2, d_model)
-                     If None, returns new_value directly
+    參數:
+        old_value: 先前的記憶，形狀 (..., d_model)
+        new_value: 候選的新記憶，形狀 (..., d_model)
+        gate_weights: 可選的門參數，形狀 (d_model * 2, d_model)
+                     如果為 None，則直接回傳 new_value
 
-    Returns:
-        updated memory, shape (..., d_model)
+    回傳:
+        更新後的記憶，形狀 (..., d_model)
 
-    Mathematical formulation:
+    數學公式:
         gate_input = concat([old_value, new_value], axis=-1)
         gate = sigmoid(gate_input @ gate_weights)
         output = gate * new_value + (1 - gate) * old_value
     """
     if gate_weights is None:
-        # No gating, just return new value
+        # 沒有門控，直接回傳新值
         return new_value
 
     assert old_value.shape == new_value.shape, \
@@ -92,16 +88,16 @@ def gated_update(old_value, new_value, gate_weights=None):
 
     d_model = old_value.shape[-1]
 
-    # Concatenate old and new values
+    # 串接舊值和新值
     gate_input = np.concatenate([old_value, new_value], axis=-1)
     # gate_input: (..., d_model * 2)
 
-    # Compute gate values using sigmoid
+    # 使用 sigmoid 計算門值
     # gate_weights: (d_model * 2, d_model)
     gate_logits = np.matmul(gate_input, gate_weights)  # (..., d_model)
     gate = 1.0 / (1.0 + np.exp(-gate_logits))  # sigmoid
 
-    # Gated combination
+    # 門控組合
     output = gate * new_value + (1.0 - gate) * old_value
 
     return output
@@ -109,19 +105,19 @@ def gated_update(old_value, new_value, gate_weights=None):
 
 def init_memory(batch_size, num_slots, slot_size, init_std=0.1):
     """
-    Initialize memory slots.
+    初始化記憶槽。
 
-    Creates initial memory state for the relational memory core.
-    Memory is initialized with small random values to break symmetry.
+    為關係記憶核心建立初始記憶狀態。
+    記憶以小的隨機值初始化以打破對稱性 (break symmetry)。
 
-    Args:
-        batch_size: number of examples in batch
-        num_slots: number of memory slots
-        slot_size: dimension of each memory slot
-        init_std: standard deviation for initialization
+    參數:
+        batch_size: 批次中的樣本數量
+        num_slots: 記憶槽的數量
+        slot_size: 每個記憶槽的維度
+        init_std: 初始化的標準差
 
-    Returns:
-        memory: shape (batch_size, num_slots, slot_size)
+    回傳:
+        memory: 形狀 (batch_size, num_slots, slot_size)
     """
     memory = np.random.randn(batch_size, num_slots, slot_size) * init_std
     return memory
@@ -129,39 +125,36 @@ def init_memory(batch_size, num_slots, slot_size, init_std=0.1):
 
 class RelationalMemory:
     """
-    Relational Memory Core using multi-head self-attention.
+    使用多頭自注意力的關係記憶核心。
 
-    This is the core innovation of the Relational RNN paper. Instead of
-    maintaining a single hidden state vector (like traditional RNNs), the
-    Relational Memory maintains multiple memory slots that can interact
-    via self-attention. This allows the model to:
+    這是 Relational RNN 論文的核心創新。不同於維護單一隱藏狀態向量（如傳統 RNN），
+    關係記憶維護多個可以透過自注意力互動的記憶槽。這使模型能夠：
 
-    1. Store multiple pieces of information simultaneously
-    2. Enable relational reasoning by allowing slots to attend to each other
-    3. Dynamically route information between slots based on relevance
+    1. 同時儲存多個資訊片段
+    2. 透過允許槽之間互相注意來實現關係推理
+    3. 根據相關性在槽之間動態路由資訊
 
-    Architecture:
-        1. Multi-head self-attention across memory slots
-        2. Residual connection around attention
-        3. Layer normalization for stability
-        4. Optional gated update to control information flow
-        5. Optional input incorporation via attention
+    架構:
+        1. 跨記憶槽的多頭自注意力 (Multi-head self-attention)
+        2. 注意力周圍的殘差連接 (Residual connection)
+        3. 用於穩定性的層正規化 (Layer normalization)
+        4. 可選的門控更新以控制資訊流
+        5. 可選的透過注意力納入輸入
 
-    The memory acts as a relational reasoning module that can maintain
-    and manipulate structured representations.
+    記憶作為一個關係推理模組，可以維護和操作結構化表示。
     """
 
     def __init__(self, num_slots=8, slot_size=64, num_heads=4,
                  use_gate=True, use_input_attention=True):
         """
-        Initialize Relational Memory Core.
+        初始化關係記憶核心。
 
-        Args:
-            num_slots: number of memory slots (default: 8)
-            slot_size: dimension of each memory slot (default: 64)
-            num_heads: number of attention heads (default: 4)
-            use_gate: whether to use gated update (default: True)
-            use_input_attention: whether to incorporate input via attention (default: True)
+        參數:
+            num_slots: 記憶槽的數量（預設：8）
+            slot_size: 每個記憶槽的維度（預設：64）
+            num_heads: 注意力頭的數量（預設：4）
+            use_gate: 是否使用門控更新（預設：True）
+            use_input_attention: 是否透過注意力納入輸入（預設：True）
         """
         self.num_slots = num_slots
         self.slot_size = slot_size
@@ -169,53 +162,53 @@ class RelationalMemory:
         self.use_gate = use_gate
         self.use_input_attention = use_input_attention
 
-        # Check that slot_size is divisible by num_heads
+        # 檢查 slot_size 是否可被 num_heads 整除
         assert slot_size % num_heads == 0, \
             f"slot_size ({slot_size}) must be divisible by num_heads ({num_heads})"
 
-        # Initialize attention parameters for self-attention
+        # 初始化自注意力的參數
         self.attn_params = init_attention_params(slot_size, num_heads)
 
-        # Initialize layer normalization parameters
+        # 初始化層正規化參數
         self.ln1_gamma = np.ones(slot_size)
         self.ln1_beta = np.zeros(slot_size)
         self.ln2_gamma = np.ones(slot_size)
         self.ln2_beta = np.zeros(slot_size)
 
-        # Initialize gate parameters if using gating
+        # 如果使用門控，則初始化門參數
         if use_gate:
-            # Gate takes concatenated [old, new] and outputs gate values
+            # 門接收串接的 [舊值, 新值] 並輸出門值
             std = np.sqrt(2.0 / (slot_size * 2 + slot_size))
             self.gate_weights = np.random.randn(slot_size * 2, slot_size) * std
         else:
             self.gate_weights = None
 
-        # Initialize parameters for input incorporation if used
+        # 如果使用輸入納入，則初始化相關參數
         if use_input_attention:
             self.ln_input_gamma = np.ones(slot_size)
             self.ln_input_beta = np.zeros(slot_size)
 
     def forward(self, memory, input_vec=None):
         """
-        Forward pass through relational memory core.
+        通過關係記憶核心的前向傳播。
 
-        Args:
-            memory: current memory state, shape (batch, num_slots, slot_size)
-            input_vec: optional input to incorporate, shape (batch, input_size)
-                      If provided and use_input_attention=True, input is attended to
+        參數:
+            memory: 目前的記憶狀態，形狀 (batch, num_slots, slot_size)
+            input_vec: 可選的要納入的輸入，形狀 (batch, input_size)
+                      如果提供且 use_input_attention=True，則會對輸入進行注意
 
-        Returns:
-            updated_memory: new memory state, shape (batch, num_slots, slot_size)
-            attention_weights: self-attention weights, shape (batch, num_heads, num_slots, num_slots)
+        回傳:
+            updated_memory: 新的記憶狀態，形狀 (batch, num_slots, slot_size)
+            attention_weights: 自注意力權重，形狀 (batch, num_heads, num_slots, num_slots)
 
-        Algorithm:
-            1. Self-attention across memory slots
-            2. Add residual connection
-            3. Layer normalization
-            4. Optional: attend to input
-            5. Optional: gated update
+        演算法:
+            1. 跨記憶槽的自注意力
+            2. 加入殘差連接
+            3. 層正規化
+            4. 可選：對輸入進行注意
+            5. 可選：門控更新
         """
-        # Validate input shapes
+        # 驗證輸入形狀
         assert memory.ndim == 3, \
             f"memory must be 3D (batch, num_slots, slot_size), got {memory.shape}"
         batch_size, num_slots, slot_size = memory.shape
@@ -224,11 +217,11 @@ class RelationalMemory:
         assert slot_size == self.slot_size, \
             f"Expected slot_size {self.slot_size}, got {slot_size}"
 
-        # Store original memory for residual and gating
+        # 儲存原始記憶以用於殘差和門控
         memory_orig = memory
 
-        # Step 1: Multi-head self-attention across memory slots
-        # Memory attends to itself: Q=K=V=memory
+        # 步驟 1：跨記憶槽的多頭自注意力
+        # 記憶對自身進行注意：Q=K=V=memory
         attn_output, attn_weights = multi_head_attention(
             Q=memory,
             K=memory,
@@ -243,58 +236,58 @@ class RelationalMemory:
         # attn_output: (batch, num_slots, slot_size)
         # attn_weights: (batch, num_heads, num_slots, num_slots)
 
-        # Step 2: Residual connection
+        # 步驟 2：殘差連接
         memory = memory_orig + attn_output
 
-        # Step 3: Layer normalization
+        # 步驟 3：層正規化
         memory = layer_norm(
             memory,
             gamma=self.ln1_gamma,
             beta=self.ln1_beta
         )
 
-        # Step 4: Optional input attention
-        # If input is provided and we're using input attention,
-        # incorporate input into memory via broadcasting and gating
+        # 步驟 4：可選的輸入注意
+        # 如果提供了輸入且我們使用輸入注意，
+        # 透過廣播和門控將輸入納入記憶
         if input_vec is not None and self.use_input_attention:
             # Input_vec: (batch, input_size)
-            # Need to make it compatible with memory
+            # 需要使其與記憶相容
 
-            # Project input to slot_size if needed
+            # 如果需要，將輸入投影到 slot_size
             if input_vec.shape[-1] != self.slot_size:
-                # Simple linear projection
+                # 簡單的線性投影
                 input_size = input_vec.shape[-1]
                 if not hasattr(self, 'input_projection'):
-                    # Initialize projection matrix
+                    # 初始化投影矩陣
                     std = np.sqrt(2.0 / (input_size + self.slot_size))
                     self.input_projection = np.random.randn(input_size, self.slot_size) * std
 
-                # Project input
+                # 投影輸入
                 input_vec_proj = np.matmul(input_vec, self.input_projection)
             else:
                 input_vec_proj = input_vec
 
-            # Broadcast input to all memory slots: (batch, num_slots, slot_size)
-            # Each slot gets to see the same input
+            # 將輸入廣播到所有記憶槽：(batch, num_slots, slot_size)
+            # 每個槽都能看到相同的輸入
             input_broadcast = np.tile(input_vec_proj[:, np.newaxis, :], (1, self.num_slots, 1))
 
-            # Combine memory and input via a simple gating mechanism
-            # This is a simplified approach compared to full cross-attention
-            # which would require handling different sequence lengths
+            # 透過簡單的門控機制組合記憶和輸入
+            # 這是相對於完整交叉注意力的簡化方法
+            # 完整交叉注意力需要處理不同的序列長度
 
-            # Concatenate memory and input, then project
+            # 串接記憶和輸入，然後投影
             memory_input_concat = np.concatenate([memory, input_broadcast], axis=-1)
-            # Shape: (batch, num_slots, slot_size * 2)
+            # 形狀：(batch, num_slots, slot_size * 2)
 
-            # Project back to slot_size
+            # 投影回 slot_size
             if not hasattr(self, 'input_combine_weights'):
                 std = np.sqrt(2.0 / (self.slot_size * 2 + self.slot_size))
                 self.input_combine_weights = np.random.randn(self.slot_size * 2, self.slot_size) * std
 
             input_contribution = np.matmul(memory_input_concat, self.input_combine_weights)
-            # Shape: (batch, num_slots, slot_size)
+            # 形狀：(batch, num_slots, slot_size)
 
-            # Add residual and normalize
+            # 加入殘差並正規化
             memory_before_input = memory
             memory = memory_before_input + input_contribution
             memory = layer_norm(
@@ -303,7 +296,7 @@ class RelationalMemory:
                 beta=self.ln_input_beta
             )
 
-        # Step 5: Optional gated update
+        # 步驟 5：可選的門控更新
         if self.use_gate and self.gate_weights is not None:
             memory = gated_update(
                 old_value=memory_orig,
@@ -315,24 +308,24 @@ class RelationalMemory:
 
     def reset_memory(self, batch_size, init_std=0.1):
         """
-        Create fresh memory state.
+        建立新的記憶狀態。
 
-        Args:
-            batch_size: number of examples in batch
-            init_std: standard deviation for initialization
+        參數:
+            batch_size: 批次中的樣本數量
+            init_std: 初始化的標準差
 
-        Returns:
-            memory: shape (batch_size, num_slots, slot_size)
+        回傳:
+            memory: 形狀 (batch_size, num_slots, slot_size)
         """
         return init_memory(batch_size, self.num_slots, self.slot_size, init_std)
 
 
 # ============================================================================
-# Test Functions
+# 測試函式
 # ============================================================================
 
 def test_layer_norm():
-    """Test layer normalization."""
+    """測試層正規化。"""
     print("=" * 80)
     print("Testing Layer Normalization")
     print("=" * 80)
@@ -390,7 +383,7 @@ def test_layer_norm():
 
 
 def test_gated_update():
-    """Test gated update mechanism."""
+    """測試門控更新機制。"""
     print("=" * 80)
     print("Testing Gated Update")
     print("=" * 80)
@@ -442,7 +435,7 @@ def test_gated_update():
 
 
 def test_init_memory():
-    """Test memory initialization."""
+    """測試記憶初始化。"""
     print("=" * 80)
     print("Testing Memory Initialization")
     print("=" * 80)
@@ -481,7 +474,7 @@ def test_init_memory():
 
 
 def test_relational_memory():
-    """Test the RelationalMemory class."""
+    """測試 RelationalMemory 類別。"""
     print("=" * 80)
     print("Testing Relational Memory Core")
     print("=" * 80)
@@ -636,7 +629,7 @@ def test_relational_memory():
 
 
 def demonstrate_relational_reasoning():
-    """Demonstrate how relational memory enables reasoning."""
+    """展示關係記憶如何實現推理。"""
     print("=" * 80)
     print("Demonstrating Relational Reasoning Capabilities")
     print("=" * 80)
@@ -722,7 +715,7 @@ def demonstrate_relational_reasoning():
 
 
 def main():
-    """Run all tests and demonstrations."""
+    """執行所有測試和展示。"""
     print("\n" + "=" * 80)
     print(" " * 20 + "RELATIONAL MEMORY CORE TEST SUITE")
     print(" " * 25 + "Paper 18: Relational RNN - Task P2-T1")

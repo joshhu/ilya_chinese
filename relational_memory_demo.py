@@ -1,17 +1,16 @@
 """
-Relational Memory Core - Quick Demonstration
-Paper 18: Relational RNN - Implementation Task P2-T1
+關係記憶核心 (Relational Memory Core) - 快速展示
+論文 18：Relational RNN（關係型循環神經網路）- 實作任務 P2-T1
 
-This script provides a concise demonstration of the Relational Memory Core
-functionality, showing how it maintains and updates multiple memory slots
-that interact via self-attention.
+本腳本提供關係記憶核心功能的簡潔展示，
+展示它如何維護和更新透過自注意力機制 (self-attention) 互動的多個記憶槽。
 """
 
 import numpy as np
 from relational_memory import RelationalMemory, init_memory
 
 def main():
-    """Demonstrate relational memory core capabilities."""
+    """展示關係記憶核心的功能。"""
 
     print("\n" + "=" * 80)
     print("RELATIONAL MEMORY CORE - QUICK DEMONSTRATION")
@@ -19,7 +18,7 @@ def main():
 
     np.random.seed(42)
 
-    # Configuration (as specified in task)
+    # 配置參數（如任務中所指定）
     batch_size = 2
     num_slots = 4
     slot_size = 64
@@ -31,7 +30,7 @@ def main():
     print(f"  Slot dimension: {slot_size}")
     print(f"  Number of attention heads: {num_heads}")
 
-    # Create relational memory module
+    # 建立關係記憶模組
     print("\n1. Creating Relational Memory Core...")
     rm = RelationalMemory(
         num_slots=num_slots,
@@ -42,39 +41,39 @@ def main():
     )
     print("   Created successfully!")
 
-    # Initialize memory
+    # 初始化記憶
     print("\n2. Initializing memory state...")
     memory = rm.reset_memory(batch_size)
     print(f"   Memory shape: {memory.shape}")
     print(f"   (batch_size={batch_size}, num_slots={num_slots}, slot_size={slot_size})")
 
-    # Forward pass without input
+    # 無輸入的前向傳播
     print("\n3. Running self-attention across memory slots (no input)...")
     updated_memory, attention_weights = rm.forward(memory)
     print(f"   Updated memory shape: {updated_memory.shape}")
     print(f"   Attention weights shape: {attention_weights.shape}")
     print(f"   Attention weights sum to 1.0: {np.allclose(np.sum(attention_weights, axis=-1), 1.0)}")
 
-    # Show attention pattern for first example, first head
+    # 顯示第一個範例、第一個頭的注意力模式
     print("\n4. Attention pattern (batch 0, head 0):")
     print("   How much each slot attends to others:")
     attn = attention_weights[0, 0]
     for i in range(num_slots):
         print(f"   Slot {i}: [{', '.join([f'{attn[i,j]:.3f}' for j in range(num_slots)])}]")
 
-    # Forward pass with input
+    # 有輸入的前向傳播
     print("\n5. Incorporating external input into memory...")
     input_vec = np.random.randn(batch_size, 32)
     updated_memory_with_input, _ = rm.forward(memory, input_vec)
     print(f"   Input shape: {input_vec.shape}")
     print(f"   Updated memory shape: {updated_memory_with_input.shape}")
 
-    # Memory changes when input is provided
+    # 當提供輸入時記憶會改變
     difference = np.linalg.norm(updated_memory - updated_memory_with_input)
     print(f"   Difference from no-input case: {difference:.4f}")
     print(f"   Input successfully incorporated: {difference > 0.1}")
 
-    # Simulate a sequence
+    # 模擬一個序列
     print("\n6. Processing a sequence of 5 inputs...")
     memory_seq = rm.reset_memory(batch_size)
 
@@ -86,7 +85,7 @@ def main():
 
     print(f"\n   Final memory shape: {memory_seq.shape}")
 
-    # Summary
+    # 摘要
     print("\n" + "=" * 80)
     print("SUMMARY")
     print("=" * 80)

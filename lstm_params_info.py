@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quick parameter count for LSTM baseline"""
+"""LSTM 基準的快速參數計數"""
 from lstm_baseline import LSTM
 import numpy as np
 

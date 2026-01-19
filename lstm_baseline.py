@@ -1,14 +1,14 @@
 """
-LSTM Baseline Implementation for Relational RNN Comparison
+用於關係型 RNN 比較的 LSTM 基準實作
 
-This module implements a standard LSTM (Long Short-Term Memory) network
-using NumPy only. The implementation includes:
-- Proper parameter initialization (Xavier/He for input weights, orthogonal for recurrent)
-- Forget gate bias initialization to 1.0 (standard trick to help learning)
-- LSTMCell for single time step processing
-- LSTM wrapper for sequence processing with output projection
+本模組僅使用 NumPy 實作標準 LSTM（長短期記憶網路）。
+實作內容包括：
+- 適當的參數初始化（輸入權重使用 Xavier/He，遞迴權重使用正交初始化）
+- 遺忘門偏差初始化為 1.0（幫助學習的標準技巧）
+- LSTMCell 用於單一時間步處理
+- LSTM 包裝器用於序列處理和輸出投影
 
-Paper 18: Relational RNN Comparison Baseline
+論文 18：關係型 RNN 比較基準
 """
 
 import numpy as np
@@ -16,15 +16,15 @@ import numpy as np
 
 def orthogonal_initializer(shape, gain=1.0):
     """
-    Initialize weight matrix with orthogonal initialization.
-    This helps prevent vanishing/exploding gradients in recurrent connections.
+    使用正交初始化來初始化權重矩陣。
+    這有助於防止遞迴連接中的梯度消失/爆炸問題。
 
-    Args:
-        shape: tuple of (rows, cols)
-        gain: scaling factor (default 1.0)
+    參數：
+        shape：(rows, cols) 的元組
+        gain：縮放因子（預設為 1.0）
 
-    Returns:
-        Orthogonal matrix of given shape
+    回傳：
+        給定形狀的正交矩陣
     """
     flat_shape = (shape[0], np.prod(shape[1:]))
     a = np.random.normal(0.0, 1.0, flat_shape)
@@ -36,14 +36,14 @@ def orthogonal_initializer(shape, gain=1.0):
 
 def xavier_initializer(shape):
     """
-    Xavier/Glorot initialization for input weights.
-    Helps maintain variance of activations across layers.
+    用於輸入權重的 Xavier/Glorot 初始化。
+    有助於維持跨層激活值的變異數。
 
-    Args:
-        shape: tuple of (rows, cols)
+    參數：
+        shape：(rows, cols) 的元組
 
-    Returns:
-        Xavier-initialized matrix
+    回傳：
+        Xavier 初始化的矩陣
     """
     limit = np.sqrt(6.0 / (shape[0] + shape[1]))
     return np.random.uniform(-limit, limit, shape)
@@ -51,105 +51,105 @@ def xavier_initializer(shape):
 
 class LSTMCell:
     """
-    Standard LSTM cell with forget, input, and output gates.
+    具有遺忘門、輸入門和輸出門的標準 LSTM 單元。
 
-    Architecture:
-        f_t = sigmoid(W_f @ x_t + U_f @ h_{t-1} + b_f)  # forget gate
-        i_t = sigmoid(W_i @ x_t + U_i @ h_{t-1} + b_i)  # input gate
-        c_tilde_t = tanh(W_c @ x_t + U_c @ h_{t-1} + b_c)  # candidate cell state
-        o_t = sigmoid(W_o @ x_t + U_o @ h_{t-1} + b_o)  # output gate
-        c_t = f_t * c_{t-1} + i_t * c_tilde_t  # new cell state
-        h_t = o_t * tanh(c_t)  # new hidden state
+    架構：
+        f_t = sigmoid(W_f @ x_t + U_f @ h_{t-1} + b_f)  # 遺忘門（forget gate）
+        i_t = sigmoid(W_i @ x_t + U_i @ h_{t-1} + b_i)  # 輸入門（input gate）
+        c_tilde_t = tanh(W_c @ x_t + U_c @ h_{t-1} + b_c)  # 候選細胞狀態（candidate cell state）
+        o_t = sigmoid(W_o @ x_t + U_o @ h_{t-1} + b_o)  # 輸出門（output gate）
+        c_t = f_t * c_{t-1} + i_t * c_tilde_t  # 新的細胞狀態
+        h_t = o_t * tanh(c_t)  # 新的隱藏狀態
 
-    Parameters:
-        input_size: dimension of input features
-        hidden_size: dimension of hidden state and cell state
+    參數：
+        input_size：輸入特徵的維度
+        hidden_size：隱藏狀態和細胞狀態的維度
     """
 
     def __init__(self, input_size, hidden_size):
         """
-        Initialize LSTM parameters with proper initialization strategies.
+        使用適當的初始化策略初始化 LSTM 參數。
 
-        Args:
-            input_size: int, dimension of input features
-            hidden_size: int, dimension of hidden and cell states
+        參數：
+            input_size：整數，輸入特徵的維度
+            hidden_size：整數，隱藏狀態和細胞狀態的維度
         """
         self.input_size = input_size
         self.hidden_size = hidden_size
 
-        # Forget gate parameters
-        # Input weights: Xavier initialization
+        # 遺忘門參數
+        # 輸入權重：Xavier 初始化
         self.W_f = xavier_initializer((hidden_size, input_size))
-        # Recurrent weights: Orthogonal initialization
+        # 遞迴權重：正交初始化
         self.U_f = orthogonal_initializer((hidden_size, hidden_size))
-        # Bias: Initialize to 1.0 (standard trick to help learning long-term dependencies)
+        # 偏差：初始化為 1.0（幫助學習長期依賴的標準技巧）
         self.b_f = np.ones((hidden_size, 1))
 
-        # Input gate parameters
+        # 輸入門參數
         self.W_i = xavier_initializer((hidden_size, input_size))
         self.U_i = orthogonal_initializer((hidden_size, hidden_size))
         self.b_i = np.zeros((hidden_size, 1))
 
-        # Cell gate parameters (candidate values)
+        # 細胞門參數（候選值）
         self.W_c = xavier_initializer((hidden_size, input_size))
         self.U_c = orthogonal_initializer((hidden_size, hidden_size))
         self.b_c = np.zeros((hidden_size, 1))
 
-        # Output gate parameters
+        # 輸出門參數
         self.W_o = xavier_initializer((hidden_size, input_size))
         self.U_o = orthogonal_initializer((hidden_size, hidden_size))
         self.b_o = np.zeros((hidden_size, 1))
 
     def forward(self, x, h_prev, c_prev):
         """
-        Forward pass for a single time step.
+        單一時間步的前向傳播。
 
-        Args:
-            x: input, shape (batch_size, input_size) or (input_size, batch_size)
-            h_prev: previous hidden state, shape (hidden_size, batch_size)
-            c_prev: previous cell state, shape (hidden_size, batch_size)
+        參數：
+            x：輸入，形狀 (batch_size, input_size) 或 (input_size, batch_size)
+            h_prev：前一個隱藏狀態，形狀 (hidden_size, batch_size)
+            c_prev：前一個細胞狀態，形狀 (hidden_size, batch_size)
 
-        Returns:
-            h: new hidden state, shape (hidden_size, batch_size)
-            c: new cell state, shape (hidden_size, batch_size)
+        回傳：
+            h：新的隱藏狀態，形狀 (hidden_size, batch_size)
+            c：新的細胞狀態，形狀 (hidden_size, batch_size)
         """
-        # Handle input shape: convert (batch_size, input_size) to (input_size, batch_size)
+        # 處理輸入形狀：將 (batch_size, input_size) 轉換為 (input_size, batch_size)
         if x.ndim == 2 and x.shape[1] == self.input_size:
-            x = x.T  # Transpose to (input_size, batch_size)
+            x = x.T  # 轉置為 (input_size, batch_size)
 
-        # Ensure x is 2D
+        # 確保 x 是二維的
         if x.ndim == 1:
             x = x.reshape(-1, 1)
 
-        # Ensure h_prev and c_prev are 2D
+        # 確保 h_prev 和 c_prev 是二維的
         if h_prev.ndim == 1:
             h_prev = h_prev.reshape(-1, 1)
         if c_prev.ndim == 1:
             c_prev = c_prev.reshape(-1, 1)
 
-        # Forget gate: decides what information to discard from cell state
+        # 遺忘門：決定要從細胞狀態中丟棄哪些資訊
         f = self._sigmoid(self.W_f @ x + self.U_f @ h_prev + self.b_f)
 
-        # Input gate: decides what new information to store in cell state
+        # 輸入門：決定要在細胞狀態中儲存哪些新資訊
         i = self._sigmoid(self.W_i @ x + self.U_i @ h_prev + self.b_i)
 
-        # Candidate cell state: new information that could be added
+        # 候選細胞狀態：可能要加入的新資訊
         c_tilde = np.tanh(self.W_c @ x + self.U_c @ h_prev + self.b_c)
 
-        # Output gate: decides what parts of cell state to output
+        # 輸出門：決定要輸出細胞狀態的哪些部分
         o = self._sigmoid(self.W_o @ x + self.U_o @ h_prev + self.b_o)
 
-        # Update cell state: forget old + add new
+        # 更新細胞狀態：遺忘舊的 + 加入新的
         c = f * c_prev + i * c_tilde
 
-        # Update hidden state: filtered cell state
+        # 更新隱藏狀態：過濾後的細胞狀態
         h = o * np.tanh(c)
 
         return h, c
 
     @staticmethod
     def _sigmoid(x):
-        """Numerically stable sigmoid function."""
+        """數值穩定的 sigmoid 函數。"""
         return np.where(
             x >= 0,
             1 / (1 + np.exp(-x)),
@@ -159,35 +159,35 @@ class LSTMCell:
 
 class LSTM:
     """
-    LSTM that processes sequences and produces outputs.
+    處理序列並產生輸出的 LSTM。
 
-    This wrapper class uses LSTMCell to process sequences of inputs
-    and optionally projects the hidden states to output space.
+    這個包裝類別使用 LSTMCell 來處理輸入序列，
+    並可選擇性地將隱藏狀態投影到輸出空間。
 
-    Parameters:
-        input_size: dimension of input features
-        hidden_size: dimension of hidden state
-        output_size: dimension of output (None for no projection)
+    參數：
+        input_size：輸入特徵的維度
+        hidden_size：隱藏狀態的維度
+        output_size：輸出的維度（若為 None 則不進行投影）
     """
 
     def __init__(self, input_size, hidden_size, output_size=None):
         """
-        Initialize LSTM with optional output projection.
+        初始化 LSTM，可選擇性地包含輸出投影。
 
-        Args:
-            input_size: int, dimension of input features
-            hidden_size: int, dimension of hidden state
-            output_size: int or None, dimension of output
-                        If None, outputs are hidden states
+        參數：
+            input_size：整數，輸入特徵的維度
+            hidden_size：整數，隱藏狀態的維度
+            output_size：整數或 None，輸出的維度
+                        若為 None，則輸出為隱藏狀態
         """
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
 
-        # Create LSTM cell
+        # 建立 LSTM 單元
         self.cell = LSTMCell(input_size, hidden_size)
 
-        # Optional output projection layer
+        # 可選的輸出投影層
         if output_size is not None:
             self.W_out = xavier_initializer((output_size, hidden_size))
             self.b_out = np.zeros((output_size, 1))
@@ -197,71 +197,71 @@ class LSTM:
 
     def forward(self, sequence, return_sequences=True, return_state=False):
         """
-        Process a sequence through the LSTM.
+        透過 LSTM 處理序列。
 
-        Args:
-            sequence: input sequence, shape (batch_size, seq_len, input_size)
-            return_sequences: bool, if True return outputs for all time steps,
-                            if False return only the last output
-            return_state: bool, if True return final (h, c) states as well
+        參數：
+            sequence：輸入序列，形狀 (batch_size, seq_len, input_size)
+            return_sequences：布林值，若為 True 則回傳所有時間步的輸出，
+                            若為 False 則只回傳最後一個輸出
+            return_state：布林值，若為 True 則同時回傳最終的 (h, c) 狀態
 
-        Returns:
-            if return_sequences=True and return_state=False:
-                outputs: shape (batch_size, seq_len, output_size or hidden_size)
-            if return_sequences=False and return_state=False:
-                output: shape (batch_size, output_size or hidden_size)
-            if return_state=True:
-                outputs (or output), final_h, final_c
+        回傳：
+            若 return_sequences=True 且 return_state=False：
+                outputs：形狀 (batch_size, seq_len, output_size 或 hidden_size)
+            若 return_sequences=False 且 return_state=False：
+                output：形狀 (batch_size, output_size 或 hidden_size)
+            若 return_state=True：
+                outputs（或 output）、final_h、final_c
         """
         batch_size, seq_len, _ = sequence.shape
 
-        # Initialize hidden and cell states
+        # 初始化隱藏狀態和細胞狀態
         h = np.zeros((self.hidden_size, batch_size))
         c = np.zeros((self.hidden_size, batch_size))
 
-        # Store outputs for each time step
+        # 儲存每個時間步的輸出
         outputs = []
 
-        # Process sequence
+        # 處理序列
         for t in range(seq_len):
-            # Get input at time t: (batch_size, input_size)
+            # 取得時間 t 的輸入：(batch_size, input_size)
             x_t = sequence[:, t, :]
 
-            # LSTM forward pass
+            # LSTM 前向傳播
             h, c = self.cell.forward(x_t, h, c)
 
-            # Project to output space if needed
+            # 如果需要，投影到輸出空間
             if self.W_out is not None:
-                # h shape: (hidden_size, batch_size)
-                # output shape: (output_size, batch_size)
+                # h 形狀：(hidden_size, batch_size)
+                # output 形狀：(output_size, batch_size)
                 out_t = self.W_out @ h + self.b_out
             else:
                 out_t = h
 
-            # Store output: transpose to (batch_size, output_size or hidden_size)
+            # 儲存輸出：轉置為 (batch_size, output_size 或 hidden_size)
             outputs.append(out_t.T)
 
-        # Stack outputs
+        # 堆疊輸出
         if return_sequences:
-            # Shape: (batch_size, seq_len, output_size or hidden_size)
+            # 形狀：(batch_size, seq_len, output_size 或 hidden_size)
             result = np.stack(outputs, axis=1)
         else:
-            # Return only last output: (batch_size, output_size or hidden_size)
+            # 只回傳最後一個輸出：(batch_size, output_size 或 hidden_size)
             result = outputs[-1]
 
         if return_state:
-            # Return outputs and final states
-            # Transpose h and c back to (batch_size, hidden_size)
+            # 回傳輸出和最終狀態
+            # 將 h 和 c 轉置回 (batch_size, hidden_size)
             return result, h.T, c.T
         else:
             return result
 
     def get_params(self):
         """
-        Get all model parameters.
+        取得所有模型參數。
 
-        Returns:
-            dict of parameter names to arrays
+        回傳：
+            參數名稱到陣列的字典
         """
         params = {
             'W_f': self.cell.W_f, 'U_f': self.cell.U_f, 'b_f': self.cell.b_f,
@@ -278,10 +278,10 @@ class LSTM:
 
     def set_params(self, params):
         """
-        Set model parameters.
+        設定模型參數。
 
-        Args:
-            params: dict of parameter names to arrays
+        參數：
+            params：參數名稱到陣列的字典
         """
         self.cell.W_f = params['W_f']
         self.cell.U_f = params['U_f']
@@ -306,29 +306,29 @@ class LSTM:
 
 def test_lstm():
     """
-    Test the LSTM implementation with random data.
-    Verifies:
-    - Correct output shapes
-    - No NaN or Inf values
-    - Proper state evolution
+    使用隨機資料測試 LSTM 實作。
+    驗證項目：
+    - 正確的輸出形狀
+    - 無 NaN 或 Inf 值
+    - 正確的狀態演化
     """
     print("="*60)
     print("Testing LSTM Implementation")
     print("="*60)
 
-    # Test parameters
+    # 測試參數
     batch_size = 2
     seq_len = 10
     input_size = 32
     hidden_size = 64
     output_size = 16
 
-    # Create random sequence
+    # 建立隨機序列
     print(f"\n1. Creating random sequence...")
     print(f"   Shape: (batch={batch_size}, seq_len={seq_len}, input_size={input_size})")
     sequence = np.random.randn(batch_size, seq_len, input_size)
 
-    # Test 1: LSTM without output projection
+    # 測試 1：無輸出投影的 LSTM
     print(f"\n2. Testing LSTM without output projection...")
     lstm_no_proj = LSTM(input_size, hidden_size, output_size=None)
 
@@ -340,7 +340,7 @@ def test_lstm():
     assert not np.isinf(outputs).any(), "Inf detected in outputs!"
     print(f"   ✓ Shape correct, no NaN/Inf")
 
-    # Test 2: LSTM with output projection
+    # 測試 2：有輸出投影的 LSTM
     print(f"\n3. Testing LSTM with output projection...")
     lstm_with_proj = LSTM(input_size, hidden_size, output_size=output_size)
 
@@ -352,7 +352,7 @@ def test_lstm():
     assert not np.isinf(outputs).any(), "Inf detected in outputs!"
     print(f"   ✓ Shape correct, no NaN/Inf")
 
-    # Test 3: Return only last output
+    # 測試 3：只回傳最後一個輸出
     print(f"\n4. Testing return_sequences=False...")
     output_last = lstm_with_proj.forward(sequence, return_sequences=False)
     print(f"   Output shape: {output_last.shape}")
@@ -360,7 +360,7 @@ def test_lstm():
     assert output_last.shape == (batch_size, output_size), "Shape mismatch!"
     print(f"   ✓ Shape correct")
 
-    # Test 4: Return states
+    # 測試 4：回傳狀態
     print(f"\n5. Testing return_state=True...")
     outputs, final_h, final_c = lstm_with_proj.forward(sequence, return_sequences=True, return_state=True)
     print(f"   Outputs shape: {outputs.shape}")
@@ -370,21 +370,21 @@ def test_lstm():
     assert final_c.shape == (batch_size, hidden_size), "Cell state shape mismatch!"
     print(f"   ✓ All shapes correct")
 
-    # Test 5: Verify initialization properties
+    # 測試 5：驗證初始化屬性
     print(f"\n6. Verifying parameter initialization...")
     params = lstm_with_proj.get_params()
 
-    # Check forget gate bias is initialized to 1.0
+    # 檢查遺忘門偏差是否初始化為 1.0
     assert np.allclose(params['b_f'], 1.0), "Forget bias should be initialized to 1.0!"
     print(f"   ✓ Forget gate bias initialized to 1.0")
 
-    # Check other biases are zero
+    # 檢查其他偏差是否為零
     assert np.allclose(params['b_i'], 0.0), "Input bias should be initialized to 0.0!"
     assert np.allclose(params['b_c'], 0.0), "Cell bias should be initialized to 0.0!"
     assert np.allclose(params['b_o'], 0.0), "Output bias should be initialized to 0.0!"
     print(f"   ✓ Other biases initialized to 0.0")
 
-    # Check recurrent weights are orthogonal (U @ U.T ≈ I)
+    # 檢查遞迴權重是否為正交（U @ U.T ≈ I）
     U_f = params['U_f']
     ortho_check = U_f @ U_f.T
     identity = np.eye(hidden_size)
@@ -392,20 +392,20 @@ def test_lstm():
     print(f"   ✓ Recurrent weights are {'orthogonal' if is_orthogonal else 'approximately orthogonal'}")
     print(f"     Max deviation from identity: {np.max(np.abs(ortho_check - identity)):.6f}")
 
-    # Test 6: Verify state evolution
+    # 測試 6：驗證狀態演化
     print(f"\n7. Testing state evolution...")
-    # Create simple sequence with pattern
+    # 建立具有模式的簡單序列
     simple_seq = np.ones((1, 5, input_size)) * 0.1
     outputs_1 = lstm_with_proj.forward(simple_seq, return_sequences=True)
 
-    # Different input should give different output
+    # 不同的輸入應該產生不同的輸出
     simple_seq_2 = np.ones((1, 5, input_size)) * 0.5
     outputs_2 = lstm_with_proj.forward(simple_seq_2, return_sequences=True)
 
     assert not np.allclose(outputs_1, outputs_2), "Different inputs should produce different outputs!"
     print(f"   ✓ State evolves correctly with different inputs")
 
-    # Test 7: Single time step processing
+    # 測試 7：單一時間步處理
     print(f"\n8. Testing single time step...")
     cell = LSTMCell(input_size, hidden_size)
     x = np.random.randn(batch_size, input_size)
@@ -419,7 +419,7 @@ def test_lstm():
     assert not np.isnan(c).any(), "NaN in cell state!"
     print(f"   ✓ Single step processing works correctly")
 
-    # Summary
+    # 總結
     print("\n" + "="*60)
     print("All tests passed! ✓")
     print("="*60)
@@ -438,8 +438,8 @@ def test_lstm():
 
 
 if __name__ == "__main__":
-    # Run tests
-    np.random.seed(42)  # For reproducibility
+    # 執行測試
+    np.random.seed(42)  # 確保可重現性
     model = test_lstm()
 
     print("\n" + "="*60)

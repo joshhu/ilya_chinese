@@ -1,9 +1,9 @@
 """
-Integration Test: Relational Memory Core
-Paper 18: Relational RNN - Task P2-T1
+整合測試：關係記憶核心（Relational Memory Core）
+論文 18：Relational RNN - 任務 P2-T1
 
-This test demonstrates how the relational memory core integrates with
-the multi-head attention mechanism from P1-T2.
+此測試展示關係記憶核心如何與來自 P1-T2 的
+多頭注意力機制（Multi-head Attention）整合。
 """
 
 import numpy as np
@@ -12,7 +12,7 @@ from attention_mechanism import multi_head_attention, init_attention_params
 
 
 def test_integration():
-    """Test integration between attention mechanism and relational memory."""
+    """測試注意力機制與關係記憶之間的整合。"""
 
     print("\n" + "=" * 80)
     print("INTEGRATION TEST: Attention Mechanism + Relational Memory")
@@ -20,7 +20,7 @@ def test_integration():
 
     np.random.seed(42)
 
-    # Test parameters
+    # 測試參數
     batch_size = 2
     num_slots = 4
     slot_size = 64
@@ -32,7 +32,7 @@ def test_integration():
     print(f"  slot_size: {slot_size}")
     print(f"  num_heads: {num_heads}")
 
-    # Test 1: Standalone multi-head attention
+    # 測試 1：獨立的多頭注意力（Multi-head Attention）
     print("\n[1] Testing multi-head attention (from P1-T2)...")
     memory = np.random.randn(batch_size, num_slots, slot_size)
     attn_params = init_attention_params(slot_size, num_heads)
@@ -49,7 +49,7 @@ def test_integration():
     assert attn_out.shape == memory.shape, "Shape mismatch"
     print("    ✅ Multi-head attention working")
 
-    # Test 2: Layer normalization
+    # 測試 2：層正規化（Layer Normalization）
     print("\n[2] Testing layer normalization...")
     gamma = np.ones(slot_size)
     beta = np.zeros(slot_size)
@@ -63,7 +63,7 @@ def test_integration():
     assert np.allclose(std, 1.0, atol=1e-5), "Std not close to 1"
     print("    ✅ Layer normalization working")
 
-    # Test 3: Gated update
+    # 測試 3：門控更新（Gated Update）
     print("\n[3] Testing gated update...")
     old_memory = np.random.randn(batch_size, num_slots, slot_size)
     new_memory = normalized
@@ -77,7 +77,7 @@ def test_integration():
     assert gated_memory.shape == old_memory.shape, "Shape mismatch"
     print("    ✅ Gated update working")
 
-    # Test 4: Full relational memory (combines all)
+    # 測試 4：完整的關係記憶（結合所有組件）
     print("\n[4] Testing full Relational Memory Core...")
     rm = RelationalMemory(
         num_slots=num_slots,
@@ -94,7 +94,7 @@ def test_integration():
     print(f"    Final memory shape: {final_memory.shape}")
     print(f"    Attention shape: {final_attn.shape}")
 
-    # Verify integration
+    # 驗證整合結果
     assert final_memory.shape == initial_memory.shape, "Shape mismatch"
     assert final_attn.shape == (batch_size, num_heads, num_slots, num_slots), "Attention shape mismatch"
     assert np.allclose(np.sum(final_attn, axis=-1), 1.0), "Attention doesn't sum to 1"
@@ -103,7 +103,7 @@ def test_integration():
 
     print("    ✅ Full Relational Memory working")
 
-    # Test 5: Multi-step processing
+    # 測試 5：多步驟處理
     print("\n[5] Testing multi-step sequential processing...")
     memory_t = rm.reset_memory(batch_size)
 
@@ -111,7 +111,7 @@ def test_integration():
         input_t = np.random.randn(batch_size, 32)
         memory_t, attn_t = rm.forward(memory_t, input_t)
 
-        # Verify at each step
+        # 在每一步驗證
         assert memory_t.shape == (batch_size, num_slots, slot_size), f"Step {t} shape error"
         assert not np.any(np.isnan(memory_t)), f"Step {t} has NaN"
 
@@ -120,7 +120,7 @@ def test_integration():
 
     print("    ✅ Multi-step processing working")
 
-    # Final summary
+    # 最終總結
     print("\n" + "=" * 80)
     print("INTEGRATION TEST SUMMARY")
     print("=" * 80)

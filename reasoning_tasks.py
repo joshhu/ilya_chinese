@@ -1,13 +1,13 @@
 """
-Synthetic Sequential Reasoning Dataset Generator
-Paper 18: Relational RNN (Santoro et al.)
+合成序列推理資料集生成器
+論文 18：Relational RNN（關係型循環神經網路）(Santoro et al.)
 
-This module generates three types of sequential reasoning tasks:
-1. Object Tracking - Track multiple objects moving in a 2D grid
-2. Pair Matching - Remember and retrieve paired elements
-3. Simple bAbI-style QA - Answer questions based on sequential facts
+本模組生成三種類型的序列推理任務：
+1. 物件追蹤 (Object Tracking) - 追蹤在 2D 網格中移動的多個物件
+2. 配對匹配 (Pair Matching) - 記憶並檢索配對元素
+3. 簡單 bAbI 風格問答 - 根據序列事實回答問題
 
-All tasks require memory and relational reasoning capabilities.
+所有任務都需要記憶和關係推理能力。
 """
 
 import numpy as np
@@ -16,38 +16,37 @@ from typing import Tuple, List, Dict
 
 
 # ============================================================================
-# Task 1: Object Tracking
+# 任務 1：物件追蹤
 # ============================================================================
 
 def generate_object_tracking(n_samples=1000, seq_len=15, n_objects=3, grid_size=5):
     """
-    Track objects moving in a 2D grid.
+    追蹤在 2D 網格中移動的物件。
 
-    Task: Multiple objects move randomly in a grid. At the end, query for the
-    final position of a specific object. Requires tracking object identities
-    and their positions over time.
+    任務：多個物件在網格中隨機移動。最後，查詢特定物件的最終位置。
+    需要追蹤物件身份及其隨時間變化的位置。
 
-    Args:
-        n_samples: Number of samples to generate
-        seq_len: Length of movement sequence
-        n_objects: Number of objects to track
-        grid_size: Size of the grid (grid_size x grid_size)
+    參數：
+        n_samples: 要生成的樣本數量
+        seq_len: 移動序列的長度
+        n_objects: 要追蹤的物件數量
+        grid_size: 網格大小 (grid_size x grid_size)
 
-    Returns:
-        X: (n_samples, seq_len+1, input_dim) - Input sequences
-           Each timestep encodes: [object_id (one-hot), x_pos, y_pos]
-           Last timestep is the query: [object_id (one-hot), 0, 0]
-        y: (n_samples, 2) - Final position of queried object [x, y]
-        metadata: Dictionary with task information
+    回傳：
+        X: (n_samples, seq_len+1, input_dim) - 輸入序列
+           每個時間步編碼：[object_id (one-hot 編碼), x_pos, y_pos]
+           最後一個時間步是查詢：[object_id (one-hot 編碼), 0, 0]
+        y: (n_samples, 2) - 被查詢物件的最終位置 [x, y]
+        metadata: 包含任務資訊的字典
 
-    Input dimension: n_objects (one-hot) + 2 (x, y coordinates)
+    輸入維度：n_objects (one-hot 編碼) + 2 (x, y 座標)
     """
     input_dim = n_objects + 2
     X = np.zeros((n_samples, seq_len + 1, input_dim))
     y = np.zeros((n_samples, 2))
 
     for i in range(n_samples):
-        # Initialize random starting positions for each object
+        # 為每個物件初始化隨機起始位置
         positions = {}
         for obj_id in range(n_objects):
             positions[obj_id] = [
@@ -55,12 +54,12 @@ def generate_object_tracking(n_samples=1000, seq_len=15, n_objects=3, grid_size=
                 np.random.randint(0, grid_size)
             ]
 
-        # Generate movement sequence
+        # 生成移動序列
         for t in range(seq_len):
-            # Choose a random object to move
+            # 選擇一個隨機物件進行移動
             obj_id = np.random.randint(0, n_objects)
 
-            # Random walk (move in one direction or stay)
+            # 隨機遊走（朝一個方向移動或停留）
             direction = np.random.choice(['up', 'down', 'left', 'right', 'stay'])
             if direction == 'up':
                 positions[obj_id][1] = min(positions[obj_id][1] + 1, grid_size - 1)
@@ -71,16 +70,16 @@ def generate_object_tracking(n_samples=1000, seq_len=15, n_objects=3, grid_size=
             elif direction == 'right':
                 positions[obj_id][0] = min(positions[obj_id][0] + 1, grid_size - 1)
 
-            # Encode: [one-hot object_id, x, y]
-            X[i, t, obj_id] = 1  # One-hot encoding
-            X[i, t, n_objects] = positions[obj_id][0] / grid_size  # Normalize x
-            X[i, t, n_objects + 1] = positions[obj_id][1] / grid_size  # Normalize y
+            # 編碼：[one-hot object_id, x, y]
+            X[i, t, obj_id] = 1  # One-hot 編碼
+            X[i, t, n_objects] = positions[obj_id][0] / grid_size  # 正規化 x
+            X[i, t, n_objects + 1] = positions[obj_id][1] / grid_size  # 正規化 y
 
-        # Query: Ask for position of a random object
+        # 查詢：詢問一個隨機物件的位置
         query_obj = np.random.randint(0, n_objects)
-        X[i, seq_len, query_obj] = 1  # Query encoding (one-hot, no position)
+        X[i, seq_len, query_obj] = 1  # 查詢編碼（one-hot，無位置）
 
-        # Target: Final position of queried object (normalized)
+        # 目標：被查詢物件的最終位置（已正規化）
         y[i, 0] = positions[query_obj][0] / grid_size
         y[i, 1] = positions[query_obj][1] / grid_size
 
@@ -97,48 +96,48 @@ def generate_object_tracking(n_samples=1000, seq_len=15, n_objects=3, grid_size=
 
 
 # ============================================================================
-# Task 2: Pair Matching
+# 任務 2：配對匹配
 # ============================================================================
 
 def generate_pair_matching(n_samples=1000, seq_len=10, vocab_size=20):
     """
-    Remember pairs shown earlier in sequence.
+    記憶序列中較早顯示的配對。
 
-    Task: First half shows pairs (A, B), (C, D), etc. Second half queries
-    one element from a pair. Model must retrieve the paired element.
+    任務：前半部分顯示配對 (A, B)、(C, D) 等。後半部分查詢配對中的一個元素。
+    模型必須檢索出配對的另一個元素。
 
-    Args:
-        n_samples: Number of samples to generate
-        seq_len: Total sequence length (must be even)
-        vocab_size: Size of vocabulary for elements
+    參數：
+        n_samples: 要生成的樣本數量
+        seq_len: 總序列長度（必須是偶數）
+        vocab_size: 元素的詞彙表大小
 
-    Returns:
-        X: (n_samples, seq_len, vocab_size+1) - Input sequences
-           First half: pairs encoded as consecutive one-hot vectors
-           Second half: query (one element with special marker)
-        y: (n_samples, vocab_size) - The paired element (one-hot)
-        metadata: Dictionary with task information
+    回傳：
+        X: (n_samples, seq_len, vocab_size+1) - 輸入序列
+           前半部分：配對編碼為連續的 one-hot 向量
+           後半部分：查詢（帶有特殊標記的單一元素）
+        y: (n_samples, vocab_size) - 配對的元素（one-hot 編碼）
+        metadata: 包含任務資訊的字典
 
-    Example sequence (vocab_size=5, seq_len=6):
-        t=0: [1,0,0,0,0,0] (element A)
-        t=1: [0,1,0,0,0,0] (element B) -> pair (A, B)
-        t=2: [0,0,1,0,0,0] (element C)
-        t=3: [0,0,0,1,0,0] (element D) -> pair (C, D)
-        t=4: [1,0,0,0,0,1] (query A with marker)
-        t=5: padding
-        Output: [0,1,0,0,0] (answer: B)
+    序列範例 (vocab_size=5, seq_len=6)：
+        t=0: [1,0,0,0,0,0] (元素 A)
+        t=1: [0,1,0,0,0,0] (元素 B) -> 配對 (A, B)
+        t=2: [0,0,1,0,0,0] (元素 C)
+        t=3: [0,0,0,1,0,0] (元素 D) -> 配對 (C, D)
+        t=4: [1,0,0,0,0,1] (查詢 A 並帶有標記)
+        t=5: 填充
+        輸出: [0,1,0,0,0] (答案: B)
     """
     if seq_len % 2 != 0:
-        seq_len += 1  # Make it even
+        seq_len += 1  # 使其為偶數
 
-    n_pairs = seq_len // 4  # Use first half for showing pairs
-    input_dim = vocab_size + 1  # +1 for query marker
+    n_pairs = seq_len // 4  # 使用前半部分來顯示配對
+    input_dim = vocab_size + 1  # +1 用於查詢標記
 
     X = np.zeros((n_samples, seq_len, input_dim))
     y = np.zeros((n_samples, vocab_size))
 
     for i in range(n_samples):
-        # Generate unique pairs
+        # 生成唯一的配對
         available = list(range(vocab_size))
         np.random.shuffle(available)
 
@@ -149,19 +148,19 @@ def generate_pair_matching(n_samples=1000, seq_len=10, vocab_size=20):
                 elem2 = available.pop()
                 pairs.append((elem1, elem2))
 
-        # Show pairs in first half
+        # 在前半部分顯示配對
         for p, (elem1, elem2) in enumerate(pairs):
             t1 = p * 2
             t2 = p * 2 + 1
             X[i, t1, elem1] = 1
             X[i, t2, elem2] = 1
 
-        # Query in second half
+        # 在後半部分進行查詢
         if pairs:
             query_pair_idx = np.random.randint(0, len(pairs))
             elem1, elem2 = pairs[query_pair_idx]
 
-            # Randomly query either element of the pair
+            # 隨機查詢配對中的任一元素
             if np.random.rand() > 0.5:
                 query_elem = elem1
                 answer_elem = elem2
@@ -169,12 +168,12 @@ def generate_pair_matching(n_samples=1000, seq_len=10, vocab_size=20):
                 query_elem = elem2
                 answer_elem = elem1
 
-            # Place query
+            # 放置查詢
             query_time = n_pairs * 2
             X[i, query_time, query_elem] = 1
-            X[i, query_time, vocab_size] = 1  # Query marker
+            X[i, query_time, vocab_size] = 1  # 查詢標記
 
-            # Set answer
+            # 設定答案
             y[i, answer_elem] = 1
 
     metadata = {
@@ -190,92 +189,92 @@ def generate_pair_matching(n_samples=1000, seq_len=10, vocab_size=20):
 
 
 # ============================================================================
-# Task 3: Simple bAbI-style QA
+# 任務 3：簡單 bAbI 風格問答
 # ============================================================================
 
 def generate_babi_simple(n_samples=1000, max_facts=5, n_entities=5, n_locations=4):
     """
-    Simple question answering with 2-3 supporting facts.
+    具有 2-3 個支持事實的簡單問答。
 
-    Task: Track entities and their properties/locations over time.
-    Answer questions that require combining multiple facts.
+    任務：追蹤實體及其屬性/位置隨時間的變化。
+    回答需要結合多個事實的問題。
 
-    Args:
-        n_samples: Number of samples to generate
-        max_facts: Maximum number of facts before question
-        n_entities: Number of entities (e.g., John, Mary, ball)
-        n_locations: Number of locations (e.g., kitchen, garden)
+    參數：
+        n_samples: 要生成的樣本數量
+        max_facts: 問題前的最大事實數量
+        n_entities: 實體數量（例如：John、Mary、ball）
+        n_locations: 位置數量（例如：kitchen、garden）
 
-    Returns:
-        X: (n_samples, max_facts+1, input_dim) - Input sequences
-           Each fact: [entity (one-hot), location (one-hot), fact_type]
-           Question: [query_entity, 0s, question_marker]
-        y: (n_samples, n_locations) - Answer location (one-hot)
-        metadata: Dictionary with task information
+    回傳：
+        X: (n_samples, max_facts+1, input_dim) - 輸入序列
+           每個事實：[entity (one-hot 編碼), location (one-hot 編碼), fact_type]
+           問題：[query_entity, 0s, question_marker]
+        y: (n_samples, n_locations) - 答案位置（one-hot 編碼）
+        metadata: 包含任務資訊的字典
 
-    Example:
-        Fact 1: John went to kitchen
-        Fact 2: Mary went to garden
-        Fact 3: John grabbed ball
-        Q: Where is ball? A: kitchen
+    範例：
+        事實 1：John went to kitchen（John 去了廚房）
+        事實 2：Mary went to garden（Mary 去了花園）
+        事實 3：John grabbed ball（John 拿起了球）
+        問：Where is ball?（球在哪裡？）答：kitchen（廚房）
 
-    Fact types:
-        0: entity goes to location
-        1: entity grabs object
+    事實類型：
+        0: 實體前往某位置
+        1: 實體拿取物件
     """
-    # Input: [entity_id (one-hot n_entities), location_id (one-hot n_locations),
-    #         fact_type (2 types), question_marker]
+    # 輸入：[entity_id (one-hot n_entities), location_id (one-hot n_locations),
+    #        fact_type (2 種類型), question_marker]
     input_dim = n_entities + n_locations + 2 + 1
 
     X = np.zeros((n_samples, max_facts + 1, input_dim))
     y = np.zeros((n_samples, n_locations))
 
-    # Reserve last entity as "object" (e.g., ball)
+    # 保留最後一個實體作為「物件」（例如：球）
     n_agents = n_entities - 1
     object_id = n_entities - 1
 
     for i in range(n_samples):
-        # Track state
+        # 追蹤狀態
         entity_locations = {}  # entity_id -> location_id
-        object_holder = None   # which entity has the object
+        object_holder = None   # 哪個實體持有物件
 
-        # Generate facts
+        # 生成事實
         n_facts = np.random.randint(2, max_facts + 1)
 
         for t in range(n_facts):
-            fact_type = np.random.choice([0, 1], p=[0.7, 0.3])  # More movement than grabs
+            fact_type = np.random.choice([0, 1], p=[0.7, 0.3])  # 移動比拿取更多
 
-            if fact_type == 0:  # Entity goes to location
+            if fact_type == 0:  # 實體前往某位置
                 entity = np.random.randint(0, n_agents)
                 location = np.random.randint(0, n_locations)
                 entity_locations[entity] = location
 
-                # Encode fact
+                # 編碼事實
                 X[i, t, entity] = 1
                 X[i, t, n_entities + location] = 1
                 X[i, t, n_entities + n_locations] = 1  # fact_type = 0
 
-            elif fact_type == 1 and len(entity_locations) > 0:  # Entity grabs object
-                # Only entities that have been to locations can grab
+            elif fact_type == 1 and len(entity_locations) > 0:  # 實體拿取物件
+                # 只有去過某位置的實體才能拿取
                 entity = np.random.choice(list(entity_locations.keys()))
                 object_holder = entity
 
-                # Encode fact
+                # 編碼事實
                 X[i, t, entity] = 1
                 X[i, t, n_entities + n_locations + 1] = 1  # fact_type = 1
 
-        # Generate question: "Where is the object?"
+        # 生成問題：「物件在哪裡？」
         X[i, max_facts, object_id] = 1
-        X[i, max_facts, -1] = 1  # Question marker
+        X[i, max_facts, -1] = 1  # 問題標記
 
-        # Answer: location of object
+        # 答案：物件的位置
         if object_holder is not None and object_holder in entity_locations:
             answer_location = entity_locations[object_holder]
         elif len(entity_locations) > 0:
-            # If object wasn't grabbed, random location where someone is
+            # 如果物件沒有被拿取，隨機選擇某人所在的位置
             answer_location = np.random.choice(list(entity_locations.values()))
         else:
-            answer_location = 0  # Default
+            answer_location = 0  # 預設值
 
         y[i, answer_location] = 1
 
@@ -292,27 +291,27 @@ def generate_babi_simple(n_samples=1000, max_facts=5, n_entities=5, n_locations=
 
 
 # ============================================================================
-# Data Utilities
+# 資料工具函式
 # ============================================================================
 
 def create_train_test_split(X, y, test_ratio=0.2, seed=42):
     """
-    Split data into train and test sets.
+    將資料分割成訓練集和測試集。
 
-    Args:
-        X: Input data (n_samples, seq_len, input_dim)
-        y: Target data (n_samples, output_dim)
-        test_ratio: Fraction of data for testing
-        seed: Random seed for reproducibility
+    參數：
+        X: 輸入資料 (n_samples, seq_len, input_dim)
+        y: 目標資料 (n_samples, output_dim)
+        test_ratio: 測試資料的比例
+        seed: 用於可重現性的隨機種子
 
-    Returns:
+    回傳：
         X_train, X_test, y_train, y_test
     """
     np.random.seed(seed)
     n_samples = X.shape[0]
     n_test = int(n_samples * test_ratio)
 
-    # Random permutation
+    # 隨機排列
     indices = np.random.permutation(n_samples)
     test_indices = indices[:n_test]
     train_indices = indices[n_test:]
@@ -327,16 +326,16 @@ def create_train_test_split(X, y, test_ratio=0.2, seed=42):
 
 def create_batches(X, y, batch_size=32, shuffle=True):
     """
-    Create mini-batches for training.
+    建立用於訓練的小批次。
 
-    Args:
-        X: Input data (n_samples, seq_len, input_dim)
-        y: Target data (n_samples, output_dim)
-        batch_size: Size of each batch
-        shuffle: Whether to shuffle before batching
+    參數：
+        X: 輸入資料 (n_samples, seq_len, input_dim)
+        y: 目標資料 (n_samples, output_dim)
+        batch_size: 每個批次的大小
+        shuffle: 是否在分批前進行洗牌
 
-    Yields:
-        (X_batch, y_batch) tuples
+    產生：
+        (X_batch, y_batch) 元組
     """
     n_samples = X.shape[0]
     indices = np.arange(n_samples)
@@ -353,20 +352,20 @@ def create_batches(X, y, batch_size=32, shuffle=True):
 
 def normalize_sequences(X, method='minmax'):
     """
-    Normalize input sequences.
+    正規化輸入序列。
 
-    Args:
-        X: Input data (n_samples, seq_len, input_dim)
-        method: 'minmax' or 'standard'
+    參數：
+        X: 輸入資料 (n_samples, seq_len, input_dim)
+        method: 'minmax'（最小最大正規化）或 'standard'（標準化）
 
-    Returns:
-        Normalized X
+    回傳：
+        正規化後的 X
     """
     if method == 'minmax':
         X_min = X.min(axis=(0, 1), keepdims=True)
         X_max = X.max(axis=(0, 1), keepdims=True)
         X_range = X_max - X_min
-        X_range[X_range == 0] = 1  # Avoid division by zero
+        X_range[X_range == 0] = 1  # 避免除以零
         return (X - X_min) / X_range
     elif method == 'standard':
         X_mean = X.mean(axis=(0, 1), keepdims=True)
@@ -378,19 +377,19 @@ def normalize_sequences(X, method='minmax'):
 
 
 # ============================================================================
-# Visualization
+# 視覺化
 # ============================================================================
 
 def visualize_example(X, y, metadata, sample_idx=0, task_type='tracking'):
     """
-    Visualize one example from each task type.
+    視覺化每種任務類型的一個範例。
 
-    Args:
-        X: Input data
-        y: Target data
-        metadata: Task metadata
-        sample_idx: Which sample to visualize
-        task_type: 'tracking', 'matching', or 'babi'
+    參數：
+        X: 輸入資料
+        y: 目標資料
+        metadata: 任務元資料
+        sample_idx: 要視覺化的樣本索引
+        task_type: 'tracking'（追蹤）、'matching'（匹配）或 'babi'
     """
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
@@ -406,16 +405,16 @@ def visualize_example(X, y, metadata, sample_idx=0, task_type='tracking'):
 
 
 def visualize_tracking_example(X, y, metadata, sample_idx, axes):
-    """Visualize object tracking task."""
+    """視覺化物件追蹤任務。"""
     seq_len = metadata['seq_len']
     n_objects = metadata['n_objects']
     grid_size = metadata['grid_size']
 
-    # Extract sequence
+    # 擷取序列
     seq = X[sample_idx]
     target = y[sample_idx]
 
-    # Plot 1: Heatmap of input sequence
+    # 圖 1：輸入序列的熱力圖
     ax = axes[0]
     ax.imshow(seq.T, aspect='auto', cmap='viridis', interpolation='nearest')
     ax.set_xlabel('Time Step')
@@ -424,15 +423,15 @@ def visualize_tracking_example(X, y, metadata, sample_idx, axes):
     ax.axvline(seq_len - 0.5, color='red', linestyle='--', label='Query')
     ax.legend()
 
-    # Plot 2: Object trajectories
+    # 圖 2：物件軌跡
     ax = axes[1]
 
-    # Track each object's position over time
+    # 追蹤每個物件隨時間的位置
     for obj_id in range(n_objects):
         positions = []
         times = []
         for t in range(seq_len):
-            if seq[t, obj_id] > 0.5:  # This object moved
+            if seq[t, obj_id] > 0.5:  # 這個物件移動了
                 x = seq[t, n_objects] * grid_size
                 y = seq[t, n_objects + 1] * grid_size
                 positions.append([x, y])
@@ -445,7 +444,7 @@ def visualize_tracking_example(X, y, metadata, sample_idx, axes):
             ax.scatter(positions[-1, 0], positions[-1, 1],
                       s=200, marker='*', edgecolors='black', linewidths=2)
 
-    # Show queried object's final position
+    # 顯示被查詢物件的最終位置
     query_obj = np.argmax(seq[seq_len, :n_objects])
     target_x = target[0] * grid_size
     target_y = target[1] * grid_size
@@ -463,7 +462,7 @@ def visualize_tracking_example(X, y, metadata, sample_idx, axes):
 
 
 def visualize_matching_example(X, y, metadata, sample_idx, axes):
-    """Visualize pair matching task."""
+    """視覺化配對匹配任務。"""
     seq_len = metadata['seq_len']
     vocab_size = metadata['vocab_size']
     n_pairs = metadata['n_pairs']
@@ -471,7 +470,7 @@ def visualize_matching_example(X, y, metadata, sample_idx, axes):
     seq = X[sample_idx]
     target = y[sample_idx]
 
-    # Plot 1: Input sequence heatmap
+    # 圖 1：輸入序列熱力圖
     ax = axes[0]
     ax.imshow(seq.T, aspect='auto', cmap='viridis', interpolation='nearest')
     ax.set_xlabel('Time Step')
@@ -480,13 +479,13 @@ def visualize_matching_example(X, y, metadata, sample_idx, axes):
     ax.axvline(n_pairs * 2 - 0.5, color='red', linestyle='--', label='Query Start')
     ax.legend()
 
-    # Plot 2: Textual representation
+    # 圖 2：文字表示
     ax = axes[1]
     ax.axis('off')
 
     text_lines = ["Pair Matching Task\n" + "="*30 + "\n"]
 
-    # Show pairs
+    # 顯示配對
     text_lines.append("Shown Pairs:")
     for p in range(n_pairs):
         t1 = p * 2
@@ -495,13 +494,13 @@ def visualize_matching_example(X, y, metadata, sample_idx, axes):
         elem2 = np.argmax(seq[t2, :vocab_size])
         text_lines.append(f"  Pair {p+1}: ({elem1}, {elem2})")
 
-    # Show query
+    # 顯示查詢
     text_lines.append("\nQuery:")
     query_time = n_pairs * 2
     query_elem = np.argmax(seq[query_time, :vocab_size])
     text_lines.append(f"  Element: {query_elem}")
 
-    # Show answer
+    # 顯示答案
     text_lines.append("\nExpected Answer:")
     answer_elem = np.argmax(target)
     text_lines.append(f"  Paired Element: {answer_elem}")
@@ -514,7 +513,7 @@ def visualize_matching_example(X, y, metadata, sample_idx, axes):
 
 
 def visualize_babi_example(X, y, metadata, sample_idx, axes):
-    """Visualize bAbI-style QA task."""
+    """視覺化 bAbI 風格問答任務。"""
     max_facts = metadata['max_facts']
     n_entities = metadata['n_entities']
     n_locations = metadata['n_locations']
@@ -522,7 +521,7 @@ def visualize_babi_example(X, y, metadata, sample_idx, axes):
     seq = X[sample_idx]
     target = y[sample_idx]
 
-    # Plot 1: Input sequence heatmap
+    # 圖 1：輸入序列熱力圖
     ax = axes[0]
     ax.imshow(seq.T, aspect='auto', cmap='viridis', interpolation='nearest')
     ax.set_xlabel('Time Step')
@@ -531,7 +530,7 @@ def visualize_babi_example(X, y, metadata, sample_idx, axes):
     ax.axvline(max_facts - 0.5, color='red', linestyle='--', label='Question')
     ax.legend()
 
-    # Plot 2: Textual representation
+    # 圖 2：文字表示
     ax = axes[1]
     ax.axis('off')
 
@@ -541,25 +540,25 @@ def visualize_babi_example(X, y, metadata, sample_idx, axes):
     text_lines = ["bAbI-style QA Task\n" + "="*30 + "\n"]
     text_lines.append("Facts:")
 
-    # Parse facts
+    # 解析事實
     for t in range(max_facts):
         if seq[t].sum() > 0:
             entity_id = np.argmax(seq[t, :n_entities])
             location_part = seq[t, n_entities:n_entities+n_locations]
             fact_type_part = seq[t, n_entities+n_locations:n_entities+n_locations+2]
 
-            if fact_type_part[0] > 0.5:  # Goes to location
+            if fact_type_part[0] > 0.5:  # 前往某位置
                 location_id = np.argmax(location_part)
                 text_lines.append(f"  {t+1}. {entity_names[entity_id]} went to {location_names[location_id]}")
-            elif fact_type_part[1] > 0.5:  # Grabs object
+            elif fact_type_part[1] > 0.5:  # 拿取物件
                 text_lines.append(f"  {t+1}. {entity_names[entity_id]} grabbed {entity_names[-1]}")
 
-    # Parse question
+    # 解析問題
     text_lines.append("\nQuestion:")
     query_entity = np.argmax(seq[max_facts, :n_entities])
     text_lines.append(f"  Where is {entity_names[query_entity]}?")
 
-    # Show answer
+    # 顯示答案
     text_lines.append("\nExpected Answer:")
     answer_location = np.argmax(target)
     text_lines.append(f"  {location_names[answer_location]}")
@@ -572,19 +571,19 @@ def visualize_babi_example(X, y, metadata, sample_idx, axes):
 
 
 # ============================================================================
-# Testing and Validation
+# 測試與驗證
 # ============================================================================
 
 def test_all_tasks():
     """
-    Test all task generation functions.
-    Verify shapes, distributions, and solvability.
+    測試所有任務生成函式。
+    驗證形狀、分佈和可解性。
     """
     print("="*60)
     print("Testing Sequential Reasoning Tasks")
     print("="*60)
 
-    # Test 1: Object Tracking
+    # 測試 1：物件追蹤
     print("\n[Task 1: Object Tracking]")
     X1, y1, meta1 = generate_object_tracking(n_samples=100, seq_len=15, n_objects=3, grid_size=5)
     print(f"  Input shape: {X1.shape}")
@@ -596,7 +595,7 @@ def test_all_tasks():
     assert y1.shape == (100, 2), "Object tracking output shape mismatch!"
     print("  ✓ Passed shape tests")
 
-    # Test 2: Pair Matching
+    # 測試 2：配對匹配
     print("\n[Task 2: Pair Matching]")
     X2, y2, meta2 = generate_pair_matching(n_samples=100, seq_len=10, vocab_size=20)
     print(f"  Input shape: {X2.shape}")
@@ -606,11 +605,11 @@ def test_all_tasks():
     print(f"  Value ranges - X: [{X2.min():.3f}, {X2.max():.3f}], y: [{y2.min():.3f}, {y2.max():.3f}]")
     assert X2.shape == (100, 10, 21), "Pair matching shape mismatch!"
     assert y2.shape == (100, 20), "Pair matching output shape mismatch!"
-    # Check that outputs are one-hot
+    # 檢查輸出是否為 one-hot 編碼
     assert np.allclose(y2.sum(axis=1), 1.0), "Pair matching outputs not one-hot!"
     print("  ✓ Passed shape tests")
 
-    # Test 3: bAbI-style QA
+    # 測試 3：bAbI 風格問答
     print("\n[Task 3: bAbI-style QA]")
     X3, y3, meta3 = generate_babi_simple(n_samples=100, max_facts=5, n_entities=5, n_locations=4)
     print(f"  Input shape: {X3.shape}")
@@ -618,13 +617,13 @@ def test_all_tasks():
     print(f"  Input dim: {meta3['input_dim']}")
     print(f"  Output dim: {meta3['output_dim']}")
     print(f"  Value ranges - X: [{X3.min():.3f}, {X3.max():.3f}], y: [{y3.min():.3f}, {y3.max():.3f}]")
-    # Input dim = n_entities + n_locations + 2 (fact types) + 1 (question marker) = 5 + 4 + 2 + 1 = 12
+    # 輸入維度 = n_entities + n_locations + 2 (事實類型) + 1 (問題標記) = 5 + 4 + 2 + 1 = 12
     assert X3.shape == (100, 6, 12), "bAbI shape mismatch!"
     assert y3.shape == (100, 4), "bAbI output shape mismatch!"
     assert np.allclose(y3.sum(axis=1), 1.0), "bAbI outputs not one-hot!"
     print("  ✓ Passed shape tests")
 
-    # Test utilities
+    # 測試工具函式
     print("\n[Testing Utilities]")
     X_train, X_test, y_train, y_test = create_train_test_split(X1, y1, test_ratio=0.2)
     print(f"  Train split: {X_train.shape}, Test split: {X_test.shape}")
@@ -651,25 +650,25 @@ def test_all_tasks():
 
 def visualize_all_tasks(test_results):
     """
-    Visualize examples from all three tasks.
+    視覺化所有三個任務的範例。
     """
     print("\nGenerating visualizations...")
 
-    # Object Tracking
+    # 物件追蹤
     X1, y1, meta1 = test_results['tracking']
     fig1 = visualize_example(X1, y1, meta1, sample_idx=0, task_type='tracking')
     plt.savefig('/Users/paulamerigojr.iipajo/sutskever-30-implementations/task_tracking_example.png',
                 dpi=150, bbox_inches='tight')
     print("  Saved: task_tracking_example.png")
 
-    # Pair Matching
+    # 配對匹配
     X2, y2, meta2 = test_results['matching']
     fig2 = visualize_example(X2, y2, meta2, sample_idx=0, task_type='matching')
     plt.savefig('/Users/paulamerigojr.iipajo/sutskever-30-implementations/task_matching_example.png',
                 dpi=150, bbox_inches='tight')
     print("  Saved: task_matching_example.png")
 
-    # bAbI QA
+    # bAbI 問答
     X3, y3, meta3 = test_results['babi']
     fig3 = visualize_example(X3, y3, meta3, sample_idx=0, task_type='babi')
     plt.savefig('/Users/paulamerigojr.iipajo/sutskever-30-implementations/task_babi_example.png',
@@ -680,17 +679,17 @@ def visualize_all_tasks(test_results):
 
 
 # ============================================================================
-# Main Execution
+# 主程式執行
 # ============================================================================
 
 if __name__ == "__main__":
-    # Set random seed for reproducibility
+    # 設定隨機種子以確保可重現性
     np.random.seed(42)
 
-    # Test all tasks
+    # 測試所有任務
     test_results = test_all_tasks()
 
-    # Visualize examples
+    # 視覺化範例
     visualize_all_tasks(test_results)
 
     print("\n" + "="*60)

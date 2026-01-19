@@ -1,10 +1,10 @@
 """
-Extended Testing and Demonstration of Reasoning Tasks
+推理任務的擴展測試與展示
 
-This script provides additional tests and demonstrations to verify that:
-1. Tasks are solvable (not random)
-2. Tasks require memory and reasoning
-3. Data quality is high
+本腳本提供額外的測試和展示，以驗證：
+1. 任務是可解的（非隨機）
+2. 任務需要記憶和推理
+3. 資料品質高
 """
 
 import numpy as np
@@ -20,14 +20,13 @@ from reasoning_tasks import (
 
 def demonstrate_solvability():
     """
-    Demonstrate that tasks are solvable by showing that outputs
-    are deterministic given the input sequences.
+    展示任務是可解的，證明給定輸入序列後輸出是確定性的。
     """
     print("\n" + "="*60)
     print("Demonstrating Task Solvability")
     print("="*60)
 
-    # Task 1: Object Tracking - Show multiple examples
+    # 任務 1：物件追蹤 - 顯示多個範例
     print("\n[Task 1: Object Tracking]")
     print("Verifying that object positions are correctly tracked...")
     X, y, meta = generate_object_tracking(n_samples=5, seq_len=10, n_objects=2)
@@ -38,7 +37,7 @@ def demonstrate_solvability():
         seq_len = meta['seq_len']
         n_objects = meta['n_objects']
 
-        # Reconstruct final positions from sequence
+        # 從序列重建最終位置
         positions = {0: None, 1: None}
         for t in range(seq_len):
             for obj_id in range(n_objects):
@@ -54,7 +53,7 @@ def demonstrate_solvability():
         assert np.allclose(expected_pos, target), "Position mismatch!"
         print(f"    ✓ Match confirmed!")
 
-    # Task 2: Pair Matching - Verify pairs are retrievable
+    # 任務 2：配對匹配 - 驗證配對可以被正確檢索
     print("\n[Task 2: Pair Matching]")
     print("Verifying that pairs can be correctly retrieved...")
     X, y, meta = generate_pair_matching(n_samples=5, seq_len=8, vocab_size=10)
@@ -65,19 +64,19 @@ def demonstrate_solvability():
         n_pairs = meta['n_pairs']
         vocab_size = meta['vocab_size']
 
-        # Extract pairs
+        # 提取配對
         pairs = []
         for p in range(n_pairs):
             elem1 = np.argmax(seq[p*2, :vocab_size])
             elem2 = np.argmax(seq[p*2+1, :vocab_size])
             pairs.append((elem1, elem2))
 
-        # Extract query
+        # 提取查詢
         query_time = n_pairs * 2
         query_elem = np.argmax(seq[query_time, :vocab_size])
         answer_elem = np.argmax(target)
 
-        # Find matching pair
+        # 尋找匹配的配對
         found = False
         for e1, e2 in pairs:
             if e1 == query_elem and e2 == answer_elem:
@@ -95,7 +94,7 @@ def demonstrate_solvability():
             print(f"    Pairs: {pairs}")
             print(f"    Warning: Answer not in shown pairs (edge case)")
 
-    # Task 3: bAbI QA - Verify logical consistency
+    # 任務 3：bAbI 問答 - 驗證邏輯一致性
     print("\n[Task 3: bAbI-style QA]")
     print("Verifying logical consistency of Q&A...")
     X, y, meta = generate_babi_simple(n_samples=5, max_facts=5)
@@ -118,13 +117,13 @@ def demonstrate_solvability():
 
 def analyze_task_statistics():
     """
-    Analyze statistical properties of generated tasks.
+    分析生成任務的統計特性。
     """
     print("\n" + "="*60)
     print("Statistical Analysis of Tasks")
     print("="*60)
 
-    # Task 1: Object Tracking
+    # 任務 1：物件追蹤
     print("\n[Task 1: Object Tracking Statistics]")
     X, y, meta = generate_object_tracking(n_samples=1000, seq_len=15, n_objects=3)
 
@@ -133,12 +132,12 @@ def analyze_task_statistics():
     print(f"  Number of objects: {meta['n_objects']}")
     print(f"  Grid size: {meta['grid_size']}x{meta['grid_size']}")
 
-    # Analyze target distribution
+    # 分析目標分佈
     print(f"  Target X range: [{y[:, 0].min():.3f}, {y[:, 0].max():.3f}]")
     print(f"  Target Y range: [{y[:, 1].min():.3f}, {y[:, 1].max():.3f}]")
     print(f"  Target mean: [{y[:, 0].mean():.3f}, {y[:, 1].mean():.3f}]")
 
-    # Task 2: Pair Matching
+    # 任務 2：配對匹配
     print("\n[Task 2: Pair Matching Statistics]")
     X, y, meta = generate_pair_matching(n_samples=1000, seq_len=10, vocab_size=20)
 
@@ -146,13 +145,13 @@ def analyze_task_statistics():
     print(f"  Vocabulary size: {meta['vocab_size']}")
     print(f"  Number of pairs: {meta['n_pairs']}")
 
-    # Check answer distribution
+    # 檢查答案分佈
     answer_counts = np.argmax(y, axis=1)
     unique, counts = np.unique(answer_counts, return_counts=True)
     print(f"  Unique answers: {len(unique)} / {meta['vocab_size']}")
     print(f"  Answer distribution spread: {counts.std():.2f}")
 
-    # Task 3: bAbI QA
+    # 任務 3：bAbI 問答
     print("\n[Task 3: bAbI-style QA Statistics]")
     X, y, meta = generate_babi_simple(n_samples=1000, max_facts=5)
 
@@ -161,7 +160,7 @@ def analyze_task_statistics():
     print(f"  Number of entities: {meta['n_entities']}")
     print(f"  Number of locations: {meta['n_locations']}")
 
-    # Check answer distribution
+    # 檢查答案分佈
     answer_counts = np.argmax(y, axis=1)
     unique, counts = np.unique(answer_counts, return_counts=True)
     print(f"  Answer distribution: {dict(zip(unique, counts))}")
@@ -171,7 +170,7 @@ def analyze_task_statistics():
 
 def create_difficulty_visualization():
     """
-    Create visualizations showing task difficulty scaling.
+    建立顯示任務難度縮放的視覺化圖表。
     """
     print("\n" + "="*60)
     print("Creating Difficulty Scaling Visualizations")
@@ -179,14 +178,14 @@ def create_difficulty_visualization():
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 4))
 
-    # Task 1: Vary number of objects
+    # 任務 1：變化物件數量
     ax = axes[0]
     n_objects_list = [2, 3, 4, 5]
     complexities = []
 
     for n_obj in n_objects_list:
         X, y, meta = generate_object_tracking(n_samples=10, n_objects=n_obj)
-        # Complexity measure: average non-zero entries per timestep
+        # 複雜度度量：每個時間步的平均非零條目
         complexity = (X > 0).sum() / (X.shape[0] * X.shape[1])
         complexities.append(complexity)
 
@@ -196,14 +195,14 @@ def create_difficulty_visualization():
     ax.set_title('Task 1: Tracking Complexity')
     ax.grid(True, alpha=0.3)
 
-    # Task 2: Vary vocabulary size
+    # 任務 2：變化詞彙表大小
     ax = axes[1]
     vocab_sizes = [10, 15, 20, 25]
     complexities = []
 
     for vocab in vocab_sizes:
         X, y, meta = generate_pair_matching(n_samples=10, vocab_size=vocab)
-        # Complexity: output space size
+        # 複雜度：輸出空間大小
         complexities.append(vocab)
 
     ax.plot(vocab_sizes, vocab_sizes, 'o-', linewidth=2, markersize=8, color='orange')
@@ -212,14 +211,14 @@ def create_difficulty_visualization():
     ax.set_title('Task 2: Matching Complexity')
     ax.grid(True, alpha=0.3)
 
-    # Task 3: Vary number of facts
+    # 任務 3：變化事實數量
     ax = axes[2]
     max_facts_list = [3, 4, 5, 6, 7]
     complexities = []
 
     for n_facts in max_facts_list:
         X, y, meta = generate_babi_simple(n_samples=10, max_facts=n_facts)
-        # Complexity: sequence length
+        # 複雜度：序列長度
         complexities.append(X.shape[1])
 
     ax.plot(max_facts_list, complexities, 'o-', linewidth=2, markersize=8, color='green')
@@ -238,34 +237,34 @@ def create_difficulty_visualization():
 
 def visualize_multiple_examples():
     """
-    Visualize multiple examples from each task to show variety.
+    視覺化每個任務的多個範例以展示多樣性。
     """
     print("\n" + "="*60)
     print("Generating Multiple Example Visualizations")
     print("="*60)
 
-    # Generate datasets
+    # 生成資料集
     X1, y1, meta1 = generate_object_tracking(n_samples=10)
     X2, y2, meta2 = generate_pair_matching(n_samples=10)
     X3, y3, meta3 = generate_babi_simple(n_samples=10)
 
-    # Create figure with 3 examples per task
+    # 為每個任務建立 3 個範例的圖表
     for idx in [1, 2, 3]:
         print(f"\n  Creating visualization set {idx}...")
 
-        # Tracking
+        # 追蹤
         fig1 = visualize_example(X1, y1, meta1, sample_idx=idx, task_type='tracking')
         plt.savefig(f'/Users/paulamerigojr.iipajo/sutskever-30-implementations/tracking_ex{idx}.png',
                     dpi=100, bbox_inches='tight')
         plt.close()
 
-        # Matching
+        # 匹配
         fig2 = visualize_example(X2, y2, meta2, sample_idx=idx, task_type='matching')
         plt.savefig(f'/Users/paulamerigojr.iipajo/sutskever-30-implementations/matching_ex{idx}.png',
                     dpi=100, bbox_inches='tight')
         plt.close()
 
-        # QA
+        # 問答
         fig3 = visualize_example(X3, y3, meta3, sample_idx=idx, task_type='babi')
         plt.savefig(f'/Users/paulamerigojr.iipajo/sutskever-30-implementations/babi_ex{idx}.png',
                     dpi=100, bbox_inches='tight')
@@ -275,10 +274,10 @@ def visualize_multiple_examples():
 
 
 if __name__ == "__main__":
-    # Set random seed
+    # 設定隨機種子
     np.random.seed(42)
 
-    # Run tests
+    # 執行測試
     demonstrate_solvability()
     analyze_task_statistics()
     create_difficulty_visualization()

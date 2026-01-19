@@ -1,11 +1,11 @@
 """
-Multi-Head Dot-Product Attention Mechanism
-Paper 18: Relational RNN - Implementation Task P1-T2
+多頭點積注意力機制（Multi-Head Dot-Product Attention Mechanism）
+論文 18：關係型 RNN - 實作任務 P1-T2
 
-This module implements the scaled dot-product attention and multi-head attention
-mechanism using only NumPy, following the "Attention is All You Need" formulation.
+本模組僅使用 NumPy 實作縮放點積注意力（Scaled Dot-Product Attention）
+和多頭注意力機制，遵循「Attention is All You Need」論文的公式。
 
-Educational implementation for the Sutskever 30 papers project.
+這是 Sutskever 30 篇論文專案的教育性實作。
 """
 
 import numpy as np
@@ -13,28 +13,28 @@ import numpy as np
 
 def scaled_dot_product_attention(Q, K, V, mask=None):
     """
-    Scaled Dot-Product Attention mechanism.
+    縮放點積注意力機制（Scaled Dot-Product Attention）。
 
-    Computes attention as: Attention(Q, K, V) = softmax(QK^T / sqrt(d_k))V
+    計算注意力：Attention(Q, K, V) = softmax(QK^T / sqrt(d_k))V
 
-    Args:
-        Q: queries, shape (batch, seq_len, d_k)
-        K: keys, shape (batch, seq_len, d_k)
-        V: values, shape (batch, seq_len, d_k)
-        mask: optional mask, shape (batch, seq_len, seq_len) or (seq_len, seq_len)
-              Values should be 0 (keep) or -inf (mask out)
+    參數：
+        Q：查詢向量（queries），形狀 (batch, seq_len, d_k)
+        K：鍵向量（keys），形狀 (batch, seq_len, d_k)
+        V：值向量（values），形狀 (batch, seq_len, d_k)
+        mask：可選的遮罩，形狀 (batch, seq_len, seq_len) 或 (seq_len, seq_len)
+              數值應為 0（保留）或 -inf（遮蔽）
 
-    Returns:
-        output: attended values, shape (batch, seq_len, d_k)
-        attention_weights: attention distribution, shape (batch, seq_len, seq_len)
+    回傳：
+        output：注意力加權後的值，形狀 (batch, seq_len, d_k)
+        attention_weights：注意力分佈，形狀 (batch, seq_len, seq_len)
 
-    Mathematical formulation:
+    數學公式：
         1. scores = QK^T / sqrt(d_k)
         2. if mask: scores = scores + mask
         3. attention_weights = softmax(scores)
         4. output = attention_weights @ V
     """
-    # Input shape assertions
+    # 輸入形狀斷言
     assert Q.ndim == 3, f"Q must be 3D (batch, seq_len, d_k), got shape {Q.shape}"
     assert K.ndim == 3, f"K must be 3D (batch, seq_len, d_k), got shape {K.shape}"
     assert V.ndim == 3, f"V must be 3D (batch, seq_len, d_k), got shape {V.shape}"
@@ -45,44 +45,43 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
     assert Q.shape[-1] == K.shape[-1], "Q and K must have same d_k dimension"
     assert K.shape[1] == V.shape[1], "K and V must have same seq_len"
 
-    # Step 1: Compute attention scores QK^T / sqrt(d_k)
+    # 步驟 1：計算注意力分數 QK^T / sqrt(d_k)
     # Q: (batch, seq_len_q, d_k)
     # K^T: (batch, d_k, seq_len_k)
     # scores: (batch, seq_len_q, seq_len_k)
     scores = np.matmul(Q, K.transpose(0, 2, 1))  # (batch, seq_len_q, seq_len_k)
 
-    # Scale by sqrt(d_k) for numerical stability
-    # This prevents the dot products from growing too large, which would push
-    # softmax into regions with very small gradients
+    # 除以 sqrt(d_k) 以保持數值穩定性
+    # 這防止點積變得太大，否則會使 softmax 進入梯度非常小的區域
     scaling_factor = np.sqrt(d_k)
     scores = scores / scaling_factor
 
-    # Step 2: Apply mask if provided
+    # 步驟 2：如果提供了遮罩則套用
     if mask is not None:
-        # Handle both (batch, seq_len, seq_len) and (seq_len, seq_len) masks
+        # 處理 (batch, seq_len, seq_len) 和 (seq_len, seq_len) 兩種遮罩形狀
         if mask.ndim == 2:
             mask = mask[np.newaxis, :, :]  # Add batch dimension
 
         assert mask.shape[-2:] == scores.shape[-2:], \
             f"Mask shape {mask.shape} incompatible with scores shape {scores.shape}"
 
-        # Add mask (typically -inf for positions to mask out)
+        # 套用遮罩（通常在需要遮蔽的位置使用 -inf）
         scores = scores + mask
 
-    # Step 3: Apply softmax to get attention weights
-    # Softmax with numerical stability trick (subtract max)
+    # 步驟 3：套用 softmax 取得注意力權重
+    # 使用數值穩定技巧的 softmax（減去最大值）
     scores_max = np.max(scores, axis=-1, keepdims=True)
     exp_scores = np.exp(scores - scores_max)
     attention_weights = exp_scores / np.sum(exp_scores, axis=-1, keepdims=True)
 
-    # Check for NaN/Inf (can happen with extreme mask values)
+    # 檢查 NaN/Inf（極端遮罩值可能導致此問題）
     if np.any(np.isnan(attention_weights)) or np.any(np.isinf(attention_weights)):
         raise ValueError("NaN or Inf detected in attention weights. Check mask values.")
 
-    # Step 4: Apply attention to values
-    # attention_weights: (batch, seq_len_q, seq_len_k)
-    # V: (batch, seq_len_k, d_k)
-    # output: (batch, seq_len_q, d_k)
+    # 步驟 4：將注意力套用至值向量
+    # attention_weights：(batch, seq_len_q, seq_len_k)
+    # V：(batch, seq_len_k, d_k)
+    # output：(batch, seq_len_q, d_k)
     output = np.matmul(attention_weights, V)
 
     return output, attention_weights
@@ -90,24 +89,24 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 
 def split_heads(x, num_heads):
     """
-    Split the last dimension into (num_heads, depth).
-    Transpose to put the head dimension first.
+    將最後一個維度拆分為 (num_heads, depth)。
+    轉置以將注意力頭維度放在前面。
 
-    Args:
-        x: tensor of shape (batch, seq_len, d_model)
-        num_heads: number of attention heads
+    參數：
+        x：張量，形狀 (batch, seq_len, d_model)
+        num_heads：注意力頭的數量
 
-    Returns:
-        tensor of shape (batch, num_heads, seq_len, depth)
-        where depth = d_model // num_heads
+    回傳：
+        張量，形狀 (batch, num_heads, seq_len, depth)
+        其中 depth = d_model // num_heads
     """
     batch_size, seq_len, d_model = x.shape
     depth = d_model // num_heads
 
-    # Reshape to (batch, seq_len, num_heads, depth)
+    # 重塑為 (batch, seq_len, num_heads, depth)
     x = x.reshape(batch_size, seq_len, num_heads, depth)
 
-    # Transpose to (batch, num_heads, seq_len, depth)
+    # 轉置為 (batch, num_heads, seq_len, depth)
     x = x.transpose(0, 2, 1, 3)
 
     return x
@@ -115,21 +114,21 @@ def split_heads(x, num_heads):
 
 def combine_heads(x):
     """
-    Inverse of split_heads.
+    split_heads 的反向操作。
 
-    Args:
-        x: tensor of shape (batch, num_heads, seq_len, depth)
+    參數：
+        x：張量，形狀 (batch, num_heads, seq_len, depth)
 
-    Returns:
-        tensor of shape (batch, seq_len, d_model)
-        where d_model = num_heads * depth
+    回傳：
+        張量，形狀 (batch, seq_len, d_model)
+        其中 d_model = num_heads * depth
     """
     batch_size, num_heads, seq_len, depth = x.shape
 
-    # Transpose to (batch, seq_len, num_heads, depth)
+    # 轉置為 (batch, seq_len, num_heads, depth)
     x = x.transpose(0, 2, 1, 3)
 
-    # Reshape to (batch, seq_len, d_model)
+    # 重塑為 (batch, seq_len, d_model)
     d_model = num_heads * depth
     x = x.reshape(batch_size, seq_len, d_model)
 
@@ -138,30 +137,29 @@ def combine_heads(x):
 
 def multi_head_attention(Q, K, V, num_heads=4, W_q=None, W_k=None, W_v=None, W_o=None, mask=None):
     """
-    Multi-Head Attention mechanism.
+    多頭注意力機制（Multi-Head Attention）。
 
-    Instead of performing a single attention function with d_model-dimensional keys,
-    values and queries, we linearly project the queries, keys and values h times with
-    different, learned linear projections. On each of these projected versions, we
-    perform the attention function in parallel, yielding output values which are
-    concatenated and once again projected.
+    不是使用 d_model 維度的鍵、值和查詢執行單一注意力函數，
+    而是使用不同的、學習到的線性投影將查詢、鍵和值線性投影 h 次。
+    在這些投影版本上，我們平行執行注意力函數，產生的輸出值會被
+    串接並再次投影。
 
-    Args:
-        Q: queries, shape (batch, seq_len, d_model)
-        K: keys, shape (batch, seq_len, d_model)
-        V: values, shape (batch, seq_len, d_model)
-        num_heads: number of attention heads
-        W_q: query projection matrix, shape (d_model, d_model)
-        W_k: key projection matrix, shape (d_model, d_model)
-        W_v: value projection matrix, shape (d_model, d_model)
-        W_o: output projection matrix, shape (d_model, d_model)
-        mask: optional mask for attention
+    參數：
+        Q：查詢向量（queries），形狀 (batch, seq_len, d_model)
+        K：鍵向量（keys），形狀 (batch, seq_len, d_model)
+        V：值向量（values），形狀 (batch, seq_len, d_model)
+        num_heads：注意力頭的數量
+        W_q：查詢投影矩陣，形狀 (d_model, d_model)
+        W_k：鍵投影矩陣，形狀 (d_model, d_model)
+        W_v：值投影矩陣，形狀 (d_model, d_model)
+        W_o：輸出投影矩陣，形狀 (d_model, d_model)
+        mask：可選的注意力遮罩
 
-    Returns:
-        output: shape (batch, seq_len, d_model)
-        attention_weights: shape (batch, num_heads, seq_len, seq_len)
+    回傳：
+        output：形狀 (batch, seq_len, d_model)
+        attention_weights：形狀 (batch, num_heads, seq_len, seq_len)
     """
-    # Input validation
+    # 輸入驗證
     assert Q.ndim == 3, f"Q must be 3D, got shape {Q.shape}"
     assert K.ndim == 3, f"K must be 3D, got shape {K.shape}"
     assert V.ndim == 3, f"V must be 3D, got shape {V.shape}"
@@ -171,9 +169,9 @@ def multi_head_attention(Q, K, V, num_heads=4, W_q=None, W_k=None, W_v=None, W_o
     assert d_model % num_heads == 0, \
         f"d_model ({d_model}) must be divisible by num_heads ({num_heads})"
 
-    depth = d_model // num_heads  # d_k in the paper
+    depth = d_model // num_heads  # 論文中的 d_k
 
-    # Initialize projection matrices if not provided
+    # 如果未提供投影矩陣則初始化
     if W_q is None or W_k is None or W_v is None or W_o is None:
         params = init_attention_params(d_model, num_heads)
         W_q = params['W_q'] if W_q is None else W_q
@@ -181,37 +179,37 @@ def multi_head_attention(Q, K, V, num_heads=4, W_q=None, W_k=None, W_v=None, W_o
         W_v = params['W_v'] if W_v is None else W_v
         W_o = params['W_o'] if W_o is None else W_o
 
-    # Step 1: Linear projections
-    # Q, K, V: (batch, seq_len, d_model)
-    # W_q, W_k, W_v: (d_model, d_model)
-    # After matmul: (batch, seq_len, d_model)
+    # 步驟 1：線性投影
+    # Q, K, V：(batch, seq_len, d_model)
+    # W_q, W_k, W_v：(d_model, d_model)
+    # 矩陣乘法後：(batch, seq_len, d_model)
     Q_proj = np.matmul(Q, W_q)  # (batch, seq_len, d_model)
     K_proj = np.matmul(K, W_k)  # (batch, seq_len, d_model)
     V_proj = np.matmul(V, W_v)  # (batch, seq_len, d_model)
 
-    # Step 2: Split into multiple heads
-    # Split d_model into num_heads * depth
+    # 步驟 2：拆分為多個注意力頭
+    # 將 d_model 拆分為 num_heads * depth
     # (batch, seq_len, d_model) -> (batch, num_heads, seq_len, depth)
     Q_split = split_heads(Q_proj, num_heads)  # (batch, num_heads, seq_len, depth)
     K_split = split_heads(K_proj, num_heads)  # (batch, num_heads, seq_len, depth)
     V_split = split_heads(V_proj, num_heads)  # (batch, num_heads, seq_len, depth)
 
-    # Step 3: Apply scaled dot-product attention to each head
-    # We need to reshape to apply attention per head
-    # Current shape: (batch, num_heads, seq_len, depth)
-    # Reshape to: (batch * num_heads, seq_len, depth)
+    # 步驟 3：對每個注意力頭套用縮放點積注意力
+    # 我們需要重塑以便對每個頭套用注意力
+    # 目前形狀：(batch, num_heads, seq_len, depth)
+    # 重塑為：(batch * num_heads, seq_len, depth)
     batch_heads = batch_size * num_heads
     Q_reshaped = Q_split.reshape(batch_heads, seq_len, depth)
     K_reshaped = K_split.reshape(batch_heads, seq_len, depth)
     V_reshaped = V_split.reshape(batch_heads, seq_len, depth)
 
-    # Adjust mask for multiple heads if provided
+    # 如果提供了遮罩，為多個注意力頭調整遮罩
     if mask is not None:
-        # If mask is (batch, seq_len, seq_len), replicate for each head
+        # 如果遮罩是 (batch, seq_len, seq_len)，為每個頭複製
         if mask.ndim == 3:
-            # Expand to (batch, num_heads, seq_len, seq_len)
+            # 擴展為 (batch, num_heads, seq_len, seq_len)
             mask_expanded = np.tile(mask[:, np.newaxis, :, :], (1, num_heads, 1, 1))
-            # Reshape to (batch * num_heads, seq_len, seq_len)
+            # 重塑為 (batch * num_heads, seq_len, seq_len)
             mask_reshaped = mask_expanded.reshape(batch_heads, seq_len, seq_len)
         elif mask.ndim == 2:
             # (seq_len, seq_len) -> (batch * num_heads, seq_len, seq_len)
@@ -221,24 +219,24 @@ def multi_head_attention(Q, K, V, num_heads=4, W_q=None, W_k=None, W_v=None, W_o
     else:
         mask_reshaped = None
 
-    # Apply attention
+    # 套用注意力
     attended, attn_weights = scaled_dot_product_attention(
         Q_reshaped, K_reshaped, V_reshaped, mask=mask_reshaped
     )
-    # attended: (batch * num_heads, seq_len, depth)
-    # attn_weights: (batch * num_heads, seq_len, seq_len)
+    # attended：(batch * num_heads, seq_len, depth)
+    # attn_weights：(batch * num_heads, seq_len, seq_len)
 
-    # Step 4: Reshape and combine heads
+    # 步驟 4：重塑並合併注意力頭
     # (batch * num_heads, seq_len, depth) -> (batch, num_heads, seq_len, depth)
     attended = attended.reshape(batch_size, num_heads, seq_len, depth)
     attn_weights = attn_weights.reshape(batch_size, num_heads, seq_len, seq_len)
 
-    # Concatenate heads: (batch, num_heads, seq_len, depth) -> (batch, seq_len, d_model)
+    # 串接注意力頭：(batch, num_heads, seq_len, depth) -> (batch, seq_len, d_model)
     attended_combined = combine_heads(attended)  # (batch, seq_len, d_model)
 
-    # Step 5: Final linear projection
-    # attended_combined: (batch, seq_len, d_model)
-    # W_o: (d_model, d_model)
+    # 步驟 5：最終線性投影
+    # attended_combined：(batch, seq_len, d_model)
+    # W_o：(d_model, d_model)
     output = np.matmul(attended_combined, W_o)  # (batch, seq_len, d_model)
 
     return output, attn_weights
@@ -246,28 +244,28 @@ def multi_head_attention(Q, K, V, num_heads=4, W_q=None, W_k=None, W_v=None, W_o
 
 def init_attention_params(d_model, num_heads):
     """
-    Initialize parameters for multi-head attention.
+    初始化多頭注意力的參數。
 
-    Uses Xavier/Glorot initialization for weight matrices to maintain
-    variance across layers and prevent gradient vanishing/explosion.
+    使用 Xavier/Glorot 初始化權重矩陣，以維持跨層的變異數
+    並防止梯度消失/爆炸。
 
-    Args:
-        d_model: model dimension
-        num_heads: number of attention heads
+    參數：
+        d_model：模型維度
+        num_heads：注意力頭的數量
 
-    Returns:
-        dict containing:
-            - W_q: query projection matrix (d_model, d_model)
-            - W_k: key projection matrix (d_model, d_model)
-            - W_v: value projection matrix (d_model, d_model)
-            - W_o: output projection matrix (d_model, d_model)
+    回傳：
+        包含以下內容的字典：
+            - W_q：查詢投影矩陣 (d_model, d_model)
+            - W_k：鍵投影矩陣 (d_model, d_model)
+            - W_v：值投影矩陣 (d_model, d_model)
+            - W_o：輸出投影矩陣 (d_model, d_model)
     """
     assert d_model % num_heads == 0, \
         f"d_model ({d_model}) must be divisible by num_heads ({num_heads})"
 
-    # Xavier/Glorot initialization
-    # Variance = 2 / (fan_in + fan_out)
-    # For weight matrix (d_model, d_model), fan_in = fan_out = d_model
+    # Xavier/Glorot 初始化
+    # 變異數 = 2 / (fan_in + fan_out)
+    # 對於權重矩陣 (d_model, d_model)，fan_in = fan_out = d_model
     # std = sqrt(2 / (d_model + d_model)) = sqrt(1 / d_model)
     std = np.sqrt(1.0 / d_model)
 
@@ -283,46 +281,46 @@ def init_attention_params(d_model, num_heads):
 
 def create_causal_mask(seq_len):
     """
-    Create a causal (lower triangular) mask for autoregressive attention.
+    為自迴歸注意力建立因果（下三角）遮罩。
 
-    This mask prevents positions from attending to subsequent positions,
-    which is crucial for autoregressive models like language models.
+    此遮罩防止位置關注後續位置，
+    這對於語言模型等自迴歸模型至關重要。
 
-    Args:
-        seq_len: sequence length
+    參數：
+        seq_len：序列長度
 
-    Returns:
-        mask of shape (seq_len, seq_len) with 0s on and below diagonal,
-        -inf above diagonal
+    回傳：
+        形狀 (seq_len, seq_len) 的遮罩，對角線及以下為 0，
+        對角線以上為 -inf
     """
-    # Create lower triangular matrix of ones
+    # 建立全為 1 的下三角矩陣
     mask = np.tril(np.ones((seq_len, seq_len)))
 
-    # Convert to -inf where mask is 0 (upper triangle)
+    # 將遮罩為 0 的位置（上三角）轉換為 -inf
     mask = np.where(mask == 0, -np.inf, 0.0)
 
     return mask
 
 
 # ============================================================================
-# Test Functions
+# 測試函數
 # ============================================================================
 
 def test_scaled_dot_product_attention():
-    """Test the scaled dot-product attention mechanism."""
+    """測試縮放點積注意力機制。"""
     print("=" * 80)
     print("Testing Scaled Dot-Product Attention")
     print("=" * 80)
 
-    # Set random seed for reproducibility
+    # 設定隨機種子以確保可重現性
     np.random.seed(42)
 
-    # Test parameters
+    # 測試參數
     batch_size = 2
     seq_len = 5
     d_k = 8
 
-    # Create random inputs
+    # 建立隨機輸入
     Q = np.random.randn(batch_size, seq_len, d_k)
     K = np.random.randn(batch_size, seq_len, d_k)
     V = np.random.randn(batch_size, seq_len, d_k)
@@ -332,35 +330,35 @@ def test_scaled_dot_product_attention():
     print(f"  K: {K.shape}")
     print(f"  V: {V.shape}")
 
-    # Test 1: Basic attention without mask
+    # 測試 1：無遮罩的基本注意力
     print("\n[Test 1] Basic attention (no mask)")
     output, attn_weights = scaled_dot_product_attention(Q, K, V)
 
     print(f"  Output shape: {output.shape}")
     print(f"  Attention weights shape: {attn_weights.shape}")
 
-    # Verify shapes
+    # 驗證形狀
     assert output.shape == (batch_size, seq_len, d_k), \
         f"Output shape mismatch: expected {(batch_size, seq_len, d_k)}, got {output.shape}"
     assert attn_weights.shape == (batch_size, seq_len, seq_len), \
         f"Attention weights shape mismatch: expected {(batch_size, seq_len, seq_len)}, got {attn_weights.shape}"
 
-    # Verify attention weights sum to 1
+    # 驗證注意力權重總和為 1
     attn_sums = np.sum(attn_weights, axis=-1)
     assert np.allclose(attn_sums, 1.0), \
         f"Attention weights don't sum to 1: {attn_sums}"
     print(f"  Attention weights sum to 1: PASS")
 
-    # Verify attention weights are non-negative
+    # 驗證注意力權重為非負
     assert np.all(attn_weights >= 0), "Attention weights contain negative values"
     print(f"  Attention weights non-negative: PASS")
 
-    # Check for NaN or Inf
+    # 檢查 NaN 或 Inf
     assert not np.any(np.isnan(output)), "Output contains NaN"
     assert not np.any(np.isinf(output)), "Output contains Inf"
     print(f"  No NaN/Inf in output: PASS")
 
-    # Test 2: Attention with causal mask
+    # 測試 2：帶因果遮罩的注意力
     print("\n[Test 2] Attention with causal mask")
     mask = create_causal_mask(seq_len)
     output_masked, attn_weights_masked = scaled_dot_product_attention(Q, K, V, mask=mask)
@@ -368,7 +366,7 @@ def test_scaled_dot_product_attention():
     print(f"  Causal mask shape: {mask.shape}")
     print(f"  Output shape: {output_masked.shape}")
 
-    # Verify causal property: upper triangle of attention should be zero
+    # 驗證因果特性：注意力的上三角應為零
     for b in range(batch_size):
         for i in range(seq_len):
             for j in range(i + 1, seq_len):
@@ -376,7 +374,7 @@ def test_scaled_dot_product_attention():
                     f"Causal mask violated at batch {b}, position ({i}, {j})"
     print(f"  Causal masking correct: PASS")
 
-    # Verify masked attention weights still sum to 1
+    # 驗證遮罩後的注意力權重仍總和為 1
     attn_sums_masked = np.sum(attn_weights_masked, axis=-1)
     assert np.allclose(attn_sums_masked, 1.0), \
         f"Masked attention weights don't sum to 1: {attn_sums_masked}"
@@ -388,15 +386,15 @@ def test_scaled_dot_product_attention():
 
 
 def test_multi_head_attention():
-    """Test the multi-head attention mechanism."""
+    """測試多頭注意力機制。"""
     print("=" * 80)
     print("Testing Multi-Head Attention")
     print("=" * 80)
 
-    # Set random seed for reproducibility
+    # 設定隨機種子以確保可重現性
     np.random.seed(42)
 
-    # Test parameters
+    # 測試參數
     batch_size = 2
     seq_len = 5
     d_model = 64
@@ -409,7 +407,7 @@ def test_multi_head_attention():
     print(f"  num_heads: {num_heads}")
     print(f"  depth (d_k): {d_model // num_heads}")
 
-    # Create random inputs
+    # 建立隨機輸入
     Q = np.random.randn(batch_size, seq_len, d_model)
     K = np.random.randn(batch_size, seq_len, d_model)
     V = np.random.randn(batch_size, seq_len, d_model)
@@ -419,7 +417,7 @@ def test_multi_head_attention():
     print(f"  K: {K.shape}")
     print(f"  V: {V.shape}")
 
-    # Initialize parameters
+    # 初始化參數
     print("\n[Test 1] Parameter initialization")
     params = init_attention_params(d_model, num_heads)
 
@@ -428,22 +426,22 @@ def test_multi_head_attention():
     print(f"  W_v shape: {params['W_v'].shape}")
     print(f"  W_o shape: {params['W_o'].shape}")
 
-    # Verify parameter shapes
+    # 驗證參數形狀
     for key in ['W_q', 'W_k', 'W_v', 'W_o']:
         assert params[key].shape == (d_model, d_model), \
             f"{key} shape mismatch: expected {(d_model, d_model)}, got {params[key].shape}"
     print(f"  Parameter shapes correct: PASS")
 
-    # Verify Xavier initialization (check variance)
+    # 驗證 Xavier 初始化（檢查變異數）
     expected_std = np.sqrt(1.0 / d_model)
     for key in ['W_q', 'W_k', 'W_v', 'W_o']:
         actual_std = np.std(params[key])
-        # Allow some variance due to random sampling
+        # 允許因隨機抽樣產生的一些變異
         assert 0.5 * expected_std < actual_std < 2.0 * expected_std, \
             f"{key} std deviation outside expected range"
     print(f"  Xavier initialization correct: PASS")
 
-    # Test 2: Multi-head attention without mask
+    # 測試 2：無遮罩的多頭注意力
     print("\n[Test 2] Multi-head attention (no mask)")
     output, attn_weights = multi_head_attention(
         Q, K, V,
@@ -457,7 +455,7 @@ def test_multi_head_attention():
     print(f"  Output shape: {output.shape}")
     print(f"  Attention weights shape: {attn_weights.shape}")
 
-    # Verify shapes
+    # 驗證形狀
     assert output.shape == (batch_size, seq_len, d_model), \
         f"Output shape mismatch: expected {(batch_size, seq_len, d_model)}, got {output.shape}"
     assert attn_weights.shape == (batch_size, num_heads, seq_len, seq_len), \
@@ -465,20 +463,20 @@ def test_multi_head_attention():
     print(f"  Output shape correct: PASS")
     print(f"  Attention weights shape correct: PASS")
 
-    # Verify attention weights sum to 1 for each head
+    # 驗證每個注意力頭的權重總和為 1
     attn_sums = np.sum(attn_weights, axis=-1)
     assert np.allclose(attn_sums, 1.0), \
         f"Attention weights don't sum to 1: {attn_sums}"
     print(f"  Attention weights sum to 1 (all heads): PASS")
 
-    # Check for NaN or Inf
+    # 檢查 NaN 或 Inf
     assert not np.any(np.isnan(output)), "Output contains NaN"
     assert not np.any(np.isinf(output)), "Output contains Inf"
     assert not np.any(np.isnan(attn_weights)), "Attention weights contain NaN"
     assert not np.any(np.isinf(attn_weights)), "Attention weights contain Inf"
     print(f"  No NaN/Inf in output: PASS")
 
-    # Test 3: Multi-head attention with causal mask
+    # 測試 3：帶因果遮罩的多頭注意力
     print("\n[Test 3] Multi-head attention with causal mask")
     mask = create_causal_mask(seq_len)
     output_masked, attn_weights_masked = multi_head_attention(
@@ -494,7 +492,7 @@ def test_multi_head_attention():
     print(f"  Output shape: {output_masked.shape}")
     print(f"  Attention weights shape: {attn_weights_masked.shape}")
 
-    # Verify causal property for all heads
+    # 驗證所有注意力頭的因果特性
     for b in range(batch_size):
         for h in range(num_heads):
             for i in range(seq_len):
@@ -503,7 +501,7 @@ def test_multi_head_attention():
                         f"Causal mask violated at batch {b}, head {h}, position ({i}, {j})"
     print(f"  Causal masking correct (all heads): PASS")
 
-    # Test 4: Different number of heads
+    # 測試 4：不同數量的注意力頭
     print("\n[Test 4] Testing different numbers of heads")
     for test_num_heads in [1, 2, 8]:
         test_params = init_attention_params(d_model, test_num_heads)
@@ -519,7 +517,7 @@ def test_multi_head_attention():
         assert test_attn.shape == (batch_size, test_num_heads, seq_len, seq_len)
         print(f"  num_heads={test_num_heads}: PASS")
 
-    # Test 5: Self-attention (Q=K=V)
+    # 測試 5：自注意力（Q=K=V）
     print("\n[Test 5] Self-attention (Q=K=V)")
     X = np.random.randn(batch_size, seq_len, d_model)
     self_output, self_attn = multi_head_attention(
@@ -540,25 +538,25 @@ def test_multi_head_attention():
 
 
 def demonstrate_attention_properties():
-    """Demonstrate key properties of the attention mechanism."""
+    """展示注意力機制的關鍵特性。"""
     print("=" * 80)
     print("Demonstrating Attention Properties")
     print("=" * 80)
 
     np.random.seed(42)
 
-    # Simple example with batch_size=1 for visualization
+    # 使用 batch_size=1 的簡單範例以便視覺化
     batch_size = 1
     seq_len = 4
     d_model = 8
     num_heads = 2
 
-    # Create simple inputs where relationships are clear
+    # 建立關係清晰的簡單輸入
     Q = np.random.randn(batch_size, seq_len, d_model) * 0.5
     K = np.random.randn(batch_size, seq_len, d_model) * 0.5
     V = np.random.randn(batch_size, seq_len, d_model) * 0.5
 
-    # Make first and last positions more similar to each other
+    # 使第一個和最後一個位置彼此更相似
     K[0, 0, :] = K[0, -1, :] = np.random.randn(d_model) * 0.5
 
     params = init_attention_params(d_model, num_heads)
@@ -574,32 +572,32 @@ def demonstrate_attention_properties():
     print(f"\nExample attention weights (head 0):")
     print(f"Shape: {attn_weights.shape}")
     print("\nAttention matrix (rows attend to columns):")
-    print(attn_weights[0, 0])  # First batch, first head
+    print(attn_weights[0, 0])  # 第一個批次，第一個注意力頭
 
     print(f"\nProperties verified:")
     print(f"  1. Each row sums to 1.0: {np.allclose(np.sum(attn_weights[0, 0], axis=-1), 1.0)}")
     print(f"  2. All weights >= 0: {np.all(attn_weights >= 0)}")
     print(f"  3. Output is weighted combination of V")
 
-    # Verify output is a weighted combination
-    # For position i, output[i] = sum_j (attn_weights[i,j] * V[j])
+    # 驗證輸出是加權組合
+    # 對於位置 i，output[i] = sum_j (attn_weights[i,j] * V[j])
     manual_output = np.zeros((seq_len, d_model))
     for i in range(seq_len):
         for j in range(seq_len):
-            # Note: Need to account for projections, so this is approximate
+            # 注意：需要考慮投影，所以這是近似值
             pass
 
     print("\n" + "=" * 80 + "\n")
 
 
 def main():
-    """Run all tests and demonstrations."""
+    """執行所有測試和展示。"""
     print("\n" + "=" * 80)
     print(" " * 15 + "MULTI-HEAD ATTENTION MECHANISM TEST SUITE")
     print(" " * 20 + "Paper 18: Relational RNN - Task P1-T2")
     print("=" * 80 + "\n")
 
-    # Run tests
+    # 執行測試
     test_scaled_dot_product_attention()
     test_multi_head_attention()
     demonstrate_attention_properties()

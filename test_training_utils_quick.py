@@ -1,8 +1,8 @@
 """
-Quick Test for Training Utilities
-Paper 18: Relational RNN - Task P2-T3
+訓練工具快速測試
+論文 18：Relational RNN - 任務 P2-T3
 
-Fast sanity check that all training utilities work correctly.
+快速健全性檢查，確認所有訓練工具正確運作。
 """
 
 import numpy as np
@@ -21,14 +21,14 @@ from training_utils import (
 
 
 def quick_test():
-    """Quick sanity check of all utilities."""
+    """所有工具的快速健全性檢查。"""
     print("=" * 60)
     print("Quick Test - Training Utilities")
     print("=" * 60)
 
     np.random.seed(42)
 
-    # Test 1: Loss functions
+    # 測試 1：損失函數（Loss Functions）
     print("\n[1/6] Testing loss functions...")
     predictions = np.random.randn(10, 3)
     targets_sparse = np.random.randint(0, 3, size=10)
@@ -47,7 +47,7 @@ def quick_test():
     assert mse >= 0, "MSE should be non-negative"
     print(f"  ✓ MSE: {mse:.4f}")
 
-    # Test 2: Gradient clipping
+    # 測試 2：梯度裁剪（Gradient Clipping）
     print("\n[2/6] Testing gradient clipping...")
     grads = {
         'W': np.random.randn(100, 100) * 10,
@@ -61,7 +61,7 @@ def quick_test():
     print(f"  ✓ Original norm: {norm:.4f}")
     print(f"  ✓ Clipped norm: {clipped_norm:.4f}")
 
-    # Test 3: Learning rate schedule
+    # 測試 3：學習率調度（Learning Rate Schedule）
     print("\n[3/6] Testing learning rate schedule...")
     lr0 = learning_rate_schedule(0, initial_lr=0.1, decay=0.9, decay_every=5)
     lr10 = learning_rate_schedule(10, initial_lr=0.1, decay=0.9, decay_every=5)
@@ -71,7 +71,7 @@ def quick_test():
     print(f"  ✓ Epoch 0: {lr0:.6f}")
     print(f"  ✓ Epoch 10: {lr10:.6f}")
 
-    # Test 4: Early stopping
+    # 測試 4：早停機制（Early Stopping）
     print("\n[4/6] Testing early stopping...")
     early_stop = EarlyStopping(patience=3)
 
@@ -87,7 +87,7 @@ def quick_test():
     print(f"  ✓ Stopped at epoch {i}")
     print(f"  ✓ Best loss: {early_stop.best_loss:.2f}")
 
-    # Test 5: Train step
+    # 測試 5：訓練步驟（Train Step）
     print("\n[5/6] Testing train step...")
     model = LSTM(input_size=5, hidden_size=8, output_size=3)
     X_batch = np.random.randn(4, 10, 5)
@@ -101,7 +101,7 @@ def quick_test():
     )
     params_after = model.get_params()
 
-    # Check parameters changed
+    # 檢查參數是否已變更
     changed = any(
         not np.allclose(params_before[k], params_after[k])
         for k in params_before.keys()
@@ -114,7 +114,7 @@ def quick_test():
     print(f"  ✓ Accuracy: {acc:.4f}")
     print(f"  ✓ Grad norm: {grad_norm:.4f}")
 
-    # Test 6: Evaluation
+    # 測試 6：評估（Evaluation）
     print("\n[6/6] Testing evaluation...")
     X_test = np.random.randn(20, 10, 5)
     y_test = np.random.randint(0, 3, size=20)
@@ -126,7 +126,7 @@ def quick_test():
     print(f"  ✓ Test loss: {test_loss:.4f}")
     print(f"  ✓ Test accuracy: {test_acc:.4f}")
 
-    # Summary
+    # 總結
     print("\n" + "=" * 60)
     print("All Quick Tests Passed! ✓")
     print("=" * 60)

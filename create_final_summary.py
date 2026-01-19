@@ -1,16 +1,16 @@
-"""Create final comparison visualization and summary"""
+"""建立最終比較視覺化圖表與摘要"""
 import matplotlib.pyplot as plt
 import json
 import numpy as np
 
-# Load results
+# 載入結果
 with open('lstm_baseline_results.json') as f:
     lstm_results = json.load(f)
     
 with open('relational_rnn_results.json') as f:
     relrnn_results = json.load(f)
 
-# Create comparison plot
+# 建立比較圖表
 fig, ax = plt.subplots(figsize=(10, 6))
 
 models = ['LSTM\nBaseline', 'Relational\nRNN']
@@ -21,14 +21,14 @@ test_losses = [
 
 bars = ax.bar(models, test_losses, color=['#3498db', '#e74c3c'], alpha=0.8, edgecolor='black', linewidth=2)
 
-# Add value labels on bars
+# 在長條圖上添加數值標籤
 for bar, loss in zip(bars, test_losses):
     height = bar.get_height()
     ax.text(bar.get_x() + bar.get_width()/2., height,
             f'{loss:.4f}',
             ha='center', va='bottom', fontsize=14, fontweight='bold')
 
-# Calculate improvement
+# 計算改善幅度
 improvement = ((test_losses[0] - test_losses[1]) / test_losses[0]) * 100
 
 ax.set_ylabel('Test Loss (MSE)', fontsize=13, fontweight='bold')
@@ -37,7 +37,7 @@ ax.set_title('Paper 18: Relational RNN vs LSTM Baseline\nObject Tracking Task',
 ax.set_ylim(0, max(test_losses) * 1.2)
 ax.grid(axis='y', alpha=0.3, linestyle='--')
 
-# Add improvement annotation
+# 添加改善幅度標註
 ax.annotate(f'{improvement:.1f}% better', 
             xy=(1, test_losses[1]), xytext=(0.5, test_losses[1] + 0.01),
             arrowprops=dict(arrowstyle='->', color='green', lw=2),
@@ -46,9 +46,9 @@ ax.annotate(f'{improvement:.1f}% better',
 
 plt.tight_layout()
 plt.savefig('paper18_final_comparison.png', dpi=150, bbox_inches='tight')
-print("✓ Saved: paper18_final_comparison.png")
+print("已儲存：paper18_final_comparison.png")
 
-# Create summary report
+# 建立摘要報告
 summary = f"""
 # Paper 18: Relational RNN - Implementation Complete
 
@@ -102,5 +102,5 @@ multi-entity reasoning and relational inference.
 with open('PAPER_18_FINAL_SUMMARY.md', 'w') as f:
     f.write(summary)
 
-print("✓ Saved: PAPER_18_FINAL_SUMMARY.md")
+print("已儲存：PAPER_18_FINAL_SUMMARY.md")
 print("\n" + summary)
