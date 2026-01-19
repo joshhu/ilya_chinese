@@ -1,253 +1,253 @@
-# Relational Memory Core - Implementation Summary
+# Relational Memory 核心 - 實作摘要
 
-**Paper**: Relational Recurrent Neural Networks (Santoro et al.)
-**Task**: P2-T1 - Implement relational memory core module
-**Date**: 2025-12-08
-**Status**: ✅ COMPLETED
-
----
-
-## Overview
-
-Implemented the core innovation of the Relational RNN paper: a **Relational Memory Core** that maintains multiple memory slots which interact via multi-head self-attention. This enables relational reasoning across stored information, superior to traditional single-vector RNN hidden states.
+**論文**：Relational Recurrent Neural Networks（Santoro et al.）
+**任務**：P2-T1 - 實作 relational memory 核心模組
+**日期**：2025-12-08
+**狀態**：✅ 完成
 
 ---
 
-## Deliverables
+## 概述
 
-### 1. Main Implementation: `relational_memory.py`
-**Lines of Code**: ~750 lines (including tests)
+實作了 Relational RNN 論文的核心創新：一個 **Relational Memory 核心**，維護多個透過多頭自注意力互動的記憶體 slots。這使得跨儲存資訊的關係推理成為可能，優於傳統的單向量 RNN hidden states。
 
-#### Core Components:
+---
 
-**a) Helper Functions:**
-- `layer_norm(x, gamma, beta)`: Layer normalization for training stability
-- `gated_update(old_value, new_value, gate_weights)`: Learned gating for memory updates
-- `init_memory(batch_size, num_slots, slot_size)`: Initialize memory state
+## 交付物
 
-**b) RelationalMemory Class:**
+### 1. 主要實作：`relational_memory.py`
+**程式碼行數**：約 750 行（包含測試）
+
+#### 核心元件：
+
+**a) 輔助函數：**
+- `layer_norm(x, gamma, beta)`：訓練穩定性的層正規化
+- `gated_update(old_value, new_value, gate_weights)`：記憶體更新的學習閘門
+- `init_memory(batch_size, num_slots, slot_size)`：初始化記憶體狀態
+
+**b) RelationalMemory 類：**
 ```python
 class RelationalMemory:
     def __init__(self, num_slots=8, slot_size=64, num_heads=4,
                  use_gate=True, use_input_attention=True)
 
     def forward(self, memory, input_vec=None)
-        # Returns: updated_memory, attention_weights
+        # 返回：updated_memory, attention_weights
 
     def reset_memory(self, batch_size)
 ```
 
-**Architecture Flow:**
-1. **Self-Attention**: Multi-head attention across memory slots (Q=K=V=memory)
-2. **Residual Connection**: Add attention output to original memory
-3. **Layer Normalization**: Stabilize activations
-4. **Input Incorporation**: Optionally incorporate external input via projection and gating
-5. **Gated Update**: Optionally gate between old and new memory values
+**架構流程：**
+1. **自注意力**：跨記憶體 slots 的多頭注意力（Q=K=V=memory）
+2. **殘差連接**：將注意力輸出添加到原始記憶體
+3. **層正規化**：穩定激活
+4. **輸入整合**：可選地透過投影和閘門整合外部輸入
+5. **閘門更新**：可選地在舊記憶體和新記憶體值之間進行閘門控制
 
-### 2. Demo Script: `relational_memory_demo.py`
-**Purpose**: Concise demonstration of capabilities
-**Lines of Code**: ~115 lines
+### 2. 示範腳本：`relational_memory_demo.py`
+**目的**：能力的簡潔展示
+**程式碼行數**：約 115 行
 
 ---
 
-## Test Results
+## 測試結果
 
-All tests passed successfully with the specified configuration:
-- **Batch size**: 2
-- **Number of slots**: 4
-- **Slot size**: 64 dimensions
-- **Number of heads**: 2
+所有測試成功通過，使用指定的配置：
+- **Batch size**：2
+- **記憶體 slots 數**：4
+- **Slot size**：64 維
+- **注意力 heads 數**：2
 
-### Test Coverage:
+### 測試覆蓋：
 
-1. **Layer Normalization Tests** ✅
-   - Normalization without scale/shift
-   - Normalization with learnable gamma/beta
-   - Verified zero mean and unit variance
+1. **層正規化測試** ✅
+   - 無縮放/平移的正規化
+   - 帶可學習 gamma/beta 的正規化
+   - 驗證零均值和單位變異數
 
-2. **Gated Update Tests** ✅
-   - Update without gating (returns new value)
-   - Update with learned gates
-   - Verified outputs are valid combinations
+2. **閘門更新測試** ✅
+   - 無閘門的更新（返回新值）
+   - 帶學習閘門的更新
+   - 驗證輸出是有效的組合
 
-3. **Memory Initialization Tests** ✅
-   - Correct shape generation
-   - Reasonable initialization statistics
+3. **記憶體初始化測試** ✅
+   - 正確的形狀生成
+   - 合理的初始化統計
 
-4. **Relational Memory Core Tests** ✅
-   - Parameter initialization
-   - Memory reset functionality
-   - Forward pass without input
-   - Forward pass with input
-   - Multiple timesteps (sequence processing)
-   - Without gating configuration
-   - Multiple configurations (different slots/sizes/heads)
+4. **Relational Memory 核心測試** ✅
+   - 參數初始化
+   - 記憶體重置功能
+   - 不帶輸入的前向傳播
+   - 帶輸入的前向傳播
+   - 多個時間步驟（序列處理）
+   - 無閘門配置
+   - 多種配置（不同 slots/sizes/heads）
 
-5. **Relational Reasoning Demonstration** ✅
-   - Attention patterns between slots
-   - Mutual slot interactions
-   - Memory evolution over time
+5. **關係推理展示** ✅
+   - Slots 之間的注意力模式
+   - 互相的 slot 互動
+   - 記憶體隨時間的演化
 
-### Sample Test Output:
+### 範例測試輸出：
 ```
-Attention pattern (batch 0, head 0):
-Slot 0: [0.487, 0.172, 0.151, 0.190]
-Slot 1: [0.126, 0.257, 0.299, 0.318]
-Slot 2: [0.198, 0.216, 0.288, 0.297]
-Slot 3: [0.197, 0.290, 0.321, 0.192]
+注意力模式（batch 0，head 0）：
+Slot 0：[0.487, 0.172, 0.151, 0.190]
+Slot 1：[0.126, 0.257, 0.299, 0.318]
+Slot 2：[0.198, 0.216, 0.288, 0.297]
+Slot 3：[0.197, 0.290, 0.321, 0.192]
 ```
 
-Each slot attends to others with learned weights, enabling relational reasoning.
+每個 slot 以學習的權重關注其他 slots，實現關係推理。
 
 ---
 
-## Design Decisions
+## 設計決策
 
-### 1. Input Incorporation Strategy
-**Challenge**: Multi-head attention expects same sequence length for Q, K, V
-**Solution**: Instead of cross-attention (memory→input), we use:
-- Broadcast input to all memory slots
-- Concatenate memory and broadcasted input
-- Linear projection to combine information
-- This maintains compatibility while allowing input incorporation
+### 1. 輸入整合策略
+**挑戰**：多頭注意力期望 Q、K、V 有相同的序列長度
+**解決方案**：不使用交叉注意力（memory→input），我們使用：
+- 將輸入廣播到所有記憶體 slots
+- 串接記憶體和廣播的輸入
+- 線性投影以組合資訊
+- 這在允許輸入整合的同時維持相容性
 
-**Alternative Considered**: Full cross-attention with sequence packing
-**Reason for Choice**: Simpler, more efficient, sufficient for the task
+**考慮的替代方案**：帶序列打包的完整交叉注意力
+**選擇原因**：更簡單、更高效、足以完成任務
 
-### 2. Layer Normalization
-**Implementation**: Normalize across feature dimension (last axis)
-**Parameters**: Learnable gamma (scale) and beta (shift)
-**Benefit**: Stabilizes training, prevents gradient issues
+### 2. 層正規化
+**實作**：跨特徵維度（最後一軸）正規化
+**參數**：可學習的 gamma（縮放）和 beta（平移）
+**好處**：穩定訓練，防止梯度問題
 
-### 3. Gating Mechanism
-**Purpose**: Learn when to retain old memory vs. incorporate new information
-**Implementation**: `gate = sigmoid(concat([old, new]) @ W)`
-**Formula**: `output = gate * new + (1 - gate) * old`
-**Benefit**: Adaptive memory retention similar to LSTM gates
+### 3. 閘門機制
+**目的**：學習何時保留舊記憶體 vs. 整合新資訊
+**實作**：`gate = sigmoid(concat([old, new]) @ W)`
+**公式**：`output = gate * new + (1 - gate) * old`
+**好處**：類似 LSTM 閘門的自適應記憶保留
 
-### 4. Parameter Initialization
-**Attention Weights**: Xavier/Glorot initialization (`std = sqrt(1/d_model)`)
-**Gate Weights**: Similar scaled initialization
-**Memory**: Small random values (`std = 0.1`) to break symmetry
-
----
-
-## Relational Reasoning Aspect
-
-### Why Relational Memory?
-
-**Traditional RNN**: Single hidden state vector
-- Limited capacity to maintain multiple concepts
-- Implicit encoding of relationships
-- All information compressed into one vector
-
-**Relational Memory**: Multiple memory slots with self-attention
-- **Explicit multi-representation**: Different slots can store different entities
-- **Relational interactions**: Slots attend to each other, modeling relationships
-- **Dynamic information routing**: Attention weights determine information flow
-- **Structured reasoning**: Better suited for tasks requiring reasoning about relations
-
-### Example Use Cases:
-
-1. **Object Tracking**: Each slot tracks one object
-   - Slots attend to each other to reason about relative positions
-
-2. **Question Answering**: Each slot stores a fact
-   - Attention finds relevant facts for answering questions
-
-3. **Graph Reasoning**: Slots represent nodes
-   - Self-attention models edge relationships
-
-### Attention Patterns Observed:
-
-From test results, we see **non-uniform attention distributions**:
-- Some slot pairs have stronger interactions (e.g., 0.608 for Slots 1-3)
-- Different heads learn different relationship patterns
-- Attention adapts based on memory content
-
-This demonstrates the model's ability to learn which memory slots should interact, a key capability for relational reasoning.
+### 4. 參數初始化
+**注意力權重**：Xavier/Glorot 初始化（`std = sqrt(1/d_model)`）
+**閘門權重**：類似的縮放初始化
+**記憶體**：小隨機值（`std = 0.1`）以打破對稱性
 
 ---
 
-## Implementation Quality
+## 關係推理方面
 
-### Code Quality:
-- ✅ Pure NumPy implementation (no PyTorch/TensorFlow)
-- ✅ Comprehensive docstrings and comments
-- ✅ Shape assertions and error handling
-- ✅ Numerical stability checks (NaN/Inf detection)
-- ✅ Modular, reusable components
+### 為什麼要 Relational Memory？
 
-### Testing:
-- ✅ 7 comprehensive test suites
-- ✅ Multiple configurations tested
-- ✅ Edge cases covered
-- ✅ All assertions passing
+**傳統 RNN**：單一 hidden state 向量
+- 維護多個概念的能力有限
+- 隱式的關係編碼
+- 所有資訊壓縮到一個向量
 
-### Documentation:
-- ✅ Mathematical formulations in docstrings
-- ✅ Architecture flow explained
-- ✅ Design decisions documented
-- ✅ Educational comments throughout
+**Relational Memory**：帶自注意力的多個記憶體 slots
+- **明確的多重表示**：不同 slots 可以儲存不同實體
+- **關係互動**：Slots 相互關注，建模關係
+- **動態資訊路由**：注意力權重決定資訊流
+- **結構化推理**：更適合需要推理關係的任務
 
----
+### 範例用例：
 
-## Integration with Phase 2
+1. **物件追蹤**：每個 slot 追蹤一個物件
+   - Slots 相互關注以推理相對位置
 
-This module is ready for integration into subsequent tasks:
+2. **問答**：每個 slot 儲存一個事實
+   - 注意力找到回答問題的相關事實
 
-- **P2-T2**: Relational RNN Cell (will use this RelationalMemory class)
-- **P2-T3**: Training utilities (can train models using this memory)
-- **P3-T2**: Full relational RNN training (core component ready)
+3. **圖推理**：Slots 表示節點
+   - 自注意力建模邊關係
 
-The clean interface (`forward()` method) makes integration straightforward.
+### 觀察到的注意力模式：
 
----
+從測試結果，我們看到**非均勻的注意力分布**：
+- 一些 slot 配對有更強的互動（例如 Slots 1-3 為 0.608）
+- 不同 heads 學習不同的關係模式
+- 注意力根據記憶體內容調整
 
-## Key Learnings
-
-1. **Self-Attention Power**: Even simple self-attention enables rich relational reasoning
-2. **Memory Slot Design**: Multiple slots provide explicit structure for representation
-3. **Gating Importance**: Learned gates crucial for controlling information flow
-4. **Normalization**: Layer norm essential for stable deep learning
-5. **Implementation Challenges**: Handling variable sequence lengths in attention requires care
+這展示了模型學習哪些記憶體 slots 應該互動的能力，這是關係推理的關鍵能力。
 
 ---
 
-## Files Generated
+## 實作品質
 
-| File | Size | Description |
+### 程式碼品質：
+- ✅ 純 NumPy 實作（無 PyTorch/TensorFlow）
+- ✅ 所有函數的完整 docstrings 和註解
+- ✅ 形狀斷言和錯誤處理
+- ✅ 數值穩定性檢查（NaN/Inf 檢測）
+- ✅ 模組化、可重用的元件
+
+### 測試：
+- ✅ 跨 7 個測試套件的完整測試
+- ✅ 測試多種配置
+- ✅ 涵蓋邊界情況
+- ✅ 所有斷言通過
+
+### 文件：
+- ✅ Docstrings 中的數學公式
+- ✅ 架構流程解釋
+- ✅ 設計決策記錄
+- ✅ 全程教育性註解
+
+---
+
+## 與第 2 階段的整合
+
+此模組已準備好整合到後續任務：
+
+- **P2-T2**：Relational RNN Cell（將使用此 RelationalMemory 類）
+- **P2-T3**：訓練工具（可以使用此記憶體訓練模型）
+- **P3-T2**：完整 relational RNN 訓練（核心元件就緒）
+
+乾淨的介面（`forward()` 方法）使整合變得直接。
+
+---
+
+## 關鍵學習
+
+1. **自注意力的力量**：即使簡單的自注意力也能實現豐富的關係推理
+2. **記憶體 Slot 設計**：多個 slots 提供有助於表示的明確結構
+3. **閘門的重要性**：用於記憶體更新的學習閘門對控制資訊流至關重要
+4. **正規化**：層正規化對穩定深度學習的訓練是必要的
+5. **實作挑戰**：處理注意力中的可變序列長度需要注意
+
+---
+
+## 生成的檔案
+
+| 檔案 | 大小 | 描述 |
 |------|------|-------------|
-| `relational_memory.py` | 28 KB | Main implementation with tests |
-| `relational_memory_demo.py` | 4.0 KB | Quick demonstration script |
-| `RELATIONAL_MEMORY_SUMMARY.md` | This file | Implementation summary |
+| `relational_memory.py` | 28 KB | 帶測試的主要實作 |
+| `relational_memory_demo.py` | 4.0 KB | 快速示範腳本 |
+| `RELATIONAL_MEMORY_SUMMARY.md` | 本檔案 | 實作摘要 |
 
 ---
 
-## Next Steps (Not Part of This Task)
+## 後續步驟（非此任務的一部分）
 
-Future tasks will build on this foundation:
+未來任務將在此基礎上建構：
 
-1. **P2-T2**: Integrate with LSTM to create full Relational RNN cell
-2. **P2-T3**: Add training utilities and loss functions
-3. **P3-T2**: Train on sequential reasoning tasks
-4. **P4-T2**: Visualize attention patterns and memory evolution
-
----
-
-## Conclusion
-
-Successfully implemented the Relational Memory Core module, the key innovation of the Relational RNN paper. The implementation:
-
-- ✅ Meets all specified requirements
-- ✅ Passes comprehensive test suite
-- ✅ Demonstrates relational reasoning capabilities
-- ✅ Ready for integration into full Relational RNN
-- ✅ Well-documented and maintainable
-- ✅ NumPy-only as required
-
-The module enables multi-entity reasoning through self-attention across memory slots, providing a powerful foundation for sequential relational reasoning tasks.
+1. **P2-T2**：與 LSTM 整合以建立完整的 Relational RNN cell
+2. **P2-T3**：添加訓練工具和損失函數
+3. **P3-T2**：在序列推理任務上訓練
+4. **P4-T2**：視覺化注意力模式和記憶體演化
 
 ---
 
-**Implementation Complete** - Ready for Phase 2, Task 2 (P2-T2)
+## 結論
+
+成功實作了 Relational Memory 核心模組，這是 Relational RNN 論文的關鍵創新。實作：
+
+- ✅ 滿足所有指定要求
+- ✅ 通過完整測試套件
+- ✅ 展示關係推理能力
+- ✅ 準備好整合到完整的 Relational RNN
+- ✅ 文件完善且可維護
+- ✅ 符合要求的僅 NumPy
+
+該模組透過跨記憶體 slots 的自注意力實現多實體推理，為序列關係推理任務提供強大的基礎。
+
+---
+
+**實作完成** - 準備好進行第 2 階段，任務 2（P2-T2）

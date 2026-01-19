@@ -1,14 +1,14 @@
-# Training Utilities - Quick Reference
+# 訓練工具 - 快速參考
 
-## Installation
+## 安裝
 ```python
-# No installation needed - pure NumPy
+# 無需安裝 - 純 NumPy
 from training_utils import *
 ```
 
-## Common Workflows
+## 常用工作流程
 
-### Basic Classification Training
+### 基本分類訓練
 ```python
 from lstm_baseline import LSTM
 from training_utils import train_model, evaluate
@@ -28,18 +28,18 @@ history = train_model(
 test_loss, test_acc = evaluate(model, X_test, y_test)
 ```
 
-### Regression Training
+### 迴歸訓練
 ```python
 history = train_model(
     model,
     train_data=(X_train, y_train),
     val_data=(X_val, y_val),
-    task='regression',  # Use MSE loss
+    task='regression',  # 使用 MSE 損失
     epochs=100
 )
 ```
 
-### With All Features
+### 帶所有功能
 ```python
 history = train_model(
     model,
@@ -48,30 +48,30 @@ history = train_model(
     epochs=100,
     batch_size=32,
     learning_rate=0.01,
-    lr_decay=0.95,           # Decay LR by 5%
-    lr_decay_every=10,       # Every 10 epochs
-    clip_norm=5.0,           # Clip gradients to norm 5
-    patience=10,             # Early stopping patience
+    lr_decay=0.95,           # LR 衰減 5%
+    lr_decay_every=10,       # 每 10 epochs
+    clip_norm=5.0,           # 梯度裁剪到範數 5
+    patience=10,             # 提前停止 patience
     task='classification',
     verbose=True
 )
 ```
 
-## Function Reference
+## 函數參考
 
-### Loss Functions
+### 損失函數
 ```python
-# Classification
-loss = cross_entropy_loss(predictions, targets)  # targets: (batch,) or (batch, n_classes)
+# 分類
+loss = cross_entropy_loss(predictions, targets)  # targets: (batch,) 或 (batch, n_classes)
 
-# Regression
-loss = mse_loss(predictions, targets)  # MSE for continuous values
+# 迴歸
+loss = mse_loss(predictions, targets)  # 連續值的 MSE
 
-# Accuracy
-acc = accuracy(predictions, targets)  # Classification accuracy [0, 1]
+# 準確度
+acc = accuracy(predictions, targets)  # 分類準確度 [0, 1]
 ```
 
-### Single Training Step
+### 單一訓練步驟
 ```python
 loss, metric, grad_norm = train_step(
     model, X_batch, y_batch,
@@ -81,7 +81,7 @@ loss, metric, grad_norm = train_step(
 )
 ```
 
-### Evaluation
+### 評估
 ```python
 loss, metric = evaluate(
     model, X_test, y_test,
@@ -90,12 +90,12 @@ loss, metric = evaluate(
 )
 ```
 
-### Gradient Clipping
+### 梯度裁剪
 ```python
 clipped_grads, global_norm = clip_gradients(grads, max_norm=5.0)
 ```
 
-### Learning Rate Schedule
+### 學習率排程
 ```python
 lr = learning_rate_schedule(
     epoch,
@@ -105,47 +105,47 @@ lr = learning_rate_schedule(
 )
 ```
 
-### Early Stopping
+### 提前停止
 ```python
 early_stop = EarlyStopping(patience=10, min_delta=1e-4)
 
 for epoch in range(epochs):
-    # ... training ...
+    # ... 訓練 ...
     if early_stop(val_loss, model.get_params()):
-        print("Early stopping!")
+        print("提前停止！")
         best_params = early_stop.get_best_params()
         model.set_params(best_params)
         break
 ```
 
-### Visualization
+### 視覺化
 ```python
 plot_training_curves(history, save_path='training.png')
 ```
 
-## History Dictionary
+## 歷史字典
 
 ```python
 history = {
-    'train_loss': [1.2, 1.1, 1.0, ...],      # Training loss per epoch
-    'train_metric': [0.3, 0.4, 0.5, ...],    # Training metric per epoch
-    'val_loss': [1.3, 1.2, 1.1, ...],        # Validation loss per epoch
-    'val_metric': [0.25, 0.35, 0.45, ...],   # Validation metric per epoch
-    'learning_rates': [0.01, 0.01, ...],     # LR used per epoch
-    'grad_norms': [0.5, 0.4, 0.3, ...]       # Gradient norms per epoch
+    'train_loss': [1.2, 1.1, 1.0, ...],      # 每 epoch 訓練損失
+    'train_metric': [0.3, 0.4, 0.5, ...],    # 每 epoch 訓練指標
+    'val_loss': [1.3, 1.2, 1.1, ...],        # 每 epoch 驗證損失
+    'val_metric': [0.25, 0.35, 0.45, ...],   # 每 epoch 驗證指標
+    'learning_rates': [0.01, 0.01, ...],     # 每 epoch 使用的 LR
+    'grad_norms': [0.5, 0.4, 0.3, ...]       # 每 epoch 梯度範數
 }
 ```
 
-## Data Format
+## 資料格式
 
-### Input Data
+### 輸入資料
 ```python
-X_train: (num_samples, seq_len, input_size)  # Sequences
-y_train: (num_samples,)                       # Class labels (classification)
-         or (num_samples, output_size)        # Targets (regression)
+X_train: (num_samples, seq_len, input_size)  # 序列
+y_train: (num_samples,)                       # 類別標籤（分類）
+         或 (num_samples, output_size)        # 目標（迴歸）
 ```
 
-### Model Interface
+### 模型介面
 ```python
 class YourModel:
     def forward(self, X, return_sequences=False):
@@ -161,9 +161,9 @@ class YourModel:
         self.b = params['b']
 ```
 
-## Hyperparameter Suggestions
+## 超參數建議
 
-### Small Dataset (< 1000 samples)
+### 小型資料集（< 1000 樣本）
 ```python
 epochs=100
 batch_size=16
@@ -174,7 +174,7 @@ clip_norm=5.0
 patience=10
 ```
 
-### Medium Dataset (1000-10000 samples)
+### 中型資料集（1000-10000 樣本）
 ```python
 epochs=50
 batch_size=32
@@ -185,7 +185,7 @@ clip_norm=5.0
 patience=10
 ```
 
-### Large Dataset (> 10000 samples)
+### 大型資料集（> 10000 樣本）
 ```python
 epochs=30
 batch_size=64
@@ -196,98 +196,98 @@ clip_norm=5.0
 patience=5
 ```
 
-### Overfitting Signs
+### 過擬合徵兆
 ```python
-# Check train-val gap
+# 檢查訓練-驗證差距
 train_acc = history['train_metric'][-1]
 val_acc = history['val_metric'][-1]
 gap = train_acc - val_acc
 
-if gap > 0.1:  # Overfitting
-    # Solutions:
-    # - Increase patience (more epochs)
-    # - Use smaller learning rate
-    # - Add regularization (not implemented)
-    # - Get more data
+if gap > 0.1:  # 過擬合
+    # 解決方案：
+    # - 增加 patience（更多 epochs）
+    # - 使用更小的學習率
+    # - 添加正則化（未實作）
+    # - 取得更多資料
 ```
 
-### Underfitting Signs
+### 欠擬合徵兆
 ```python
-# Both train and val accuracy low
+# 訓練和驗證準確度都低
 if train_acc < 0.6 and val_acc < 0.6:
-    # Solutions:
-    # - Increase model size (hidden_size)
-    # - Train longer (more epochs)
-    # - Increase learning rate
-    # - Check data quality
+    # 解決方案：
+    # - 增加模型大小（hidden_size）
+    # - 訓練更長（更多 epochs）
+    # - 增加學習率
+    # - 檢查資料品質
 ```
 
-## Common Issues
+## 常見問題
 
-### NaN in Loss
+### 損失中的 NaN
 ```python
-# Possible causes:
-# 1. Learning rate too high → reduce LR
-# 2. Gradients exploding → check clip_norm
-# 3. Numerical instability → losses use stable implementations
+# 可能原因：
+# 1. 學習率太高 → 降低 LR
+# 2. 梯度爆炸 → 檢查 clip_norm
+# 3. 數值不穩定 → 損失使用穩定實作
 
-# Solution:
-learning_rate=0.001  # Reduce
-clip_norm=1.0        # Lower clipping threshold
+# 解決方案：
+learning_rate=0.001  # 降低
+clip_norm=1.0        # 較低的裁剪閾值
 ```
 
-### Loss Not Decreasing
+### 損失不下降
 ```python
-# Possible causes:
-# 1. Learning rate too low
-# 2. Wrong task type
-# 3. Data/label mismatch
+# 可能原因：
+# 1. 學習率太低
+# 2. 錯誤的任務類型
+# 3. 資料/標籤不匹配
 
-# Check:
-print(f"Loss: {loss}, Metric: {metric}")
-print(f"Predictions: {model.forward(X_batch[:1])}")
-print(f"Targets: {y_batch[:1]}")
+# 檢查：
+print(f"損失：{loss}，指標：{metric}")
+print(f"預測：{model.forward(X_batch[:1])}")
+print(f"目標：{y_batch[:1]}")
 ```
 
-### Training Too Slow
+### 訓練太慢
 ```python
-# Numerical gradients are slow
-# For faster training:
-# 1. Use smaller batches
-# 2. Reduce model size
-# 3. Use fewer epochs
-# 4. Implement analytical gradients (BPTT)
+# 數值梯度很慢
+# 為了更快訓練：
+# 1. 使用更小的批次
+# 2. 減小模型大小
+# 3. 使用更少的 epochs
+# 4. 實作解析梯度（BPTT）
 ```
 
-## Testing
+## 測試
 
-### Quick Test
+### 快速測試
 ```bash
 python3 test_training_utils_quick.py
 ```
 
-### Full Test Suite
+### 完整測試套件
 ```bash
 python3 training_utils.py
 ```
 
-### Demonstrations
+### 示範
 ```bash
 python3 training_demo.py
 ```
 
-## Files
+## 檔案
 
-- `training_utils.py` - Main implementation (37KB)
-- `training_demo.py` - Demonstrations (11KB)
-- `test_training_utils_quick.py` - Quick test (5KB)
-- `TRAINING_UTILS_README.md` - Full documentation (10KB)
-- `TRAINING_QUICK_REFERENCE.md` - This file (8KB)
-- `TASK_P2_T3_SUMMARY.md` - Task summary (9KB)
+- `training_utils.py` - 主要實作（37KB）
+- `training_demo.py` - 示範（11KB）
+- `test_training_utils_quick.py` - 快速測試（5KB）
+- `TRAINING_UTILS_README.md` - 完整文件（10KB）
+- `TRAINING_QUICK_REFERENCE.md` - 本檔案（8KB）
+- `TASK_P2_T3_SUMMARY.md` - 任務摘要（9KB）
 
-## Next Steps
+## 後續步驟
 
-1. Implement Relational RNN with same interface
-2. Use these utilities to train both LSTM and Relational RNN
-3. Compare performance on reasoning tasks
-4. (Optional) Implement analytical gradients for faster training
+1. 實作具有相同介面的 Relational RNN
+2. 使用這些工具訓練 LSTM 和 Relational RNN
+3. 比較推理任務上的效能
+4. （可選）實作解析梯度以獲得更快的訓練

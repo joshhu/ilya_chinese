@@ -1,226 +1,226 @@
-# Synthetic Sequential Reasoning Dataset - Implementation Summary
+# 合成序列推理資料集 - 實作摘要
 
-**Task**: P1-T4 - Generate synthetic sequential reasoning dataset for Paper 18 (Relational RNN)
+**任務**：P1-T4 - 為論文 18（Relational RNN）生成合成序列推理資料集
 
-**Status**: Complete ✓
-
----
-
-## Overview
-
-This implementation provides three distinct sequential reasoning tasks designed to test memory and relational reasoning capabilities of neural network models. All tasks require the model to:
-- **Remember** past events in a sequence
-- **Track relationships** between entities
-- **Reason** about temporal dependencies
+**狀態**：完成 ✓
 
 ---
 
-## Task Descriptions
+## 概述
 
-### Task 1: Object Tracking
-
-**What it does**: Track multiple objects moving in a 2D grid over time and answer queries about their final positions.
-
-**Why it requires relational reasoning**:
-- Must maintain separate memory slots for each object
-- Must track object identity across time steps
-- Must reason about spatial relationships (positions in grid)
-- Cannot solve through simple pattern matching - requires explicit memory
-
-**Example**:
-```
-Objects move in 5x5 grid for 15 timesteps
-- Object 0 moves: (1,2) -> (2,2) -> (2,3) -> ...
-- Object 1 moves: (3,4) -> (3,3) -> (4,3) -> ...
-- Object 2 moves: (0,0) -> (1,0) -> (1,1) -> ...
-
-Query: "Where is Object 1?"
-Answer: Final position of Object 1
-```
-
-**Data Shape**:
-- Input: `(n_samples, seq_len+1, n_objects+2)`
-  - One-hot object ID + normalized (x,y) coordinates
-  - Last timestep is query (object ID only)
-- Output: `(n_samples, 2)` - normalized (x,y) position
-
-**Key Properties**:
-- Deterministic: Same sequence always gives same answer
-- Scalable: Can increase grid size, objects, or sequence length
-- Tests memory: Must remember last position of queried object
+本實作提供三個獨特的序列推理任務，旨在測試神經網路模型的記憶和關係推理能力。所有任務都要求模型：
+- **記住**序列中的過去事件
+- **追蹤**實體之間的關係
+- **推理**時間依賴
 
 ---
 
-### Task 2: Pair Matching
+## 任務描述
 
-**What it does**: Show pairs of elements, then query one element and ask for its paired element.
+### 任務 1：物件追蹤
 
-**Why it requires relational reasoning**:
-- Must bind pairs together in memory (relational structure)
-- Must retrieve correct pair given partial information
-- Must distinguish between multiple pairs shown in sequence
-- Cannot use positional encoding alone - needs associative memory
+**功能**：追蹤多個物件在 2D 網格中隨時間移動，並回答關於其最終位置的查詢。
 
-**Example**:
+**為什麼需要關係推理**：
+- 必須為每個物件維護獨立的記憶體 slots
+- 必須跨時間步驟追蹤物件身份
+- 必須推理空間關係（網格中的位置）
+- 無法透過簡單的模式匹配解決 - 需要明確的記憶體
+
+**範例**：
 ```
-Show pairs:
-- Timestep 0-1: (8, 16) - element 8 paired with 16
-- Timestep 2-3: (11, 6) - element 11 paired with 6
+物件在 5x5 網格中移動 15 個時間步驟
+- 物件 0 移動：(1,2) -> (2,2) -> (2,3) -> ...
+- 物件 1 移動：(3,4) -> (3,3) -> (4,3) -> ...
+- 物件 2 移動：(0,0) -> (1,0) -> (1,1) -> ...
 
-Query (timestep 4): "What was paired with 8?"
-Answer: 16
+查詢：「物件 1 在哪裡？」
+答案：物件 1 的最終位置
 ```
 
-**Data Shape**:
-- Input: `(n_samples, seq_len, vocab_size+1)`
-  - One-hot element encoding
-  - +1 dimension for query marker
-- Output: `(n_samples, vocab_size)` - one-hot answer
+**資料形狀**：
+- 輸入：`(n_samples, seq_len+1, n_objects+2)`
+  - One-hot 物件 ID + 正規化 (x,y) 座標
+  - 最後一個時間步驟是查詢（僅物件 ID）
+- 輸出：`(n_samples, 2)` - 正規化 (x,y) 位置
 
-**Key Properties**:
-- Tests associative memory: Must create and retrieve bindings
-- Scalable: Can vary vocabulary size and number of pairs
-- Relational: The relationship between pairs is key information
+**關鍵屬性**：
+- 確定性：相同序列總是給出相同答案
+- 可擴展：可以增加網格大小、物件數或序列長度
+- 測試記憶：必須記住查詢物件的最後位置
 
 ---
 
-### Task 3: Simple bAbI-style QA
+### 任務 2：配對匹配
 
-**What it does**: Track entities and their locations/properties over time, then answer questions requiring multi-hop reasoning.
+**功能**：展示元素配對，然後查詢一個元素並要求其配對的元素。
 
-**Why it requires relational reasoning**:
-- Must track multiple entities simultaneously
-- Must update entity states over time (locations change)
-- Must perform multi-hop reasoning (e.g., "John has ball" + "John in kitchen" = "ball in kitchen")
-- Requires understanding of entity-property-location relations
+**為什麼需要關係推理**：
+- 必須在記憶體中綁定配對（關係結構）
+- 必須根據部分資訊檢索正確的配對
+- 必須區分序列中展示的多個配對
+- 不能僅使用位置編碼 - 需要關聯記憶
 
-**Example**:
+**範例**：
 ```
-Facts:
-1. Entity0 went to Loc3
-2. Entity2 went to Loc3
-3. Entity2 went to Loc3
-4. Entity0 went to Loc3
-5. Entity2 grabbed Object
+展示配對：
+- 時間步驟 0-1：(8, 16) - 元素 8 與 16 配對
+- 時間步驟 2-3：(11, 6) - 元素 11 與 6 配對
 
-Question: "Where is Object?"
-Answer: Loc3 (because Entity2 has it and is in Loc3)
+查詢（時間步驟 4）：「與 8 配對的是什麼？」
+答案：16
 ```
 
-**Data Shape**:
-- Input: `(n_samples, max_facts+1, n_entities+n_locations+3)`
-  - One-hot entity + location encoding
-  - Fact type markers (movement vs. grab)
-  - Question marker
-- Output: `(n_samples, n_locations)` - one-hot location answer
+**資料形狀**：
+- 輸入：`(n_samples, seq_len, vocab_size+1)`
+  - One-hot 元素編碼
+  - +1 維度用於查詢標記
+- 輸出：`(n_samples, vocab_size)` - one-hot 答案
 
-**Key Properties**:
-- Multi-hop reasoning: Must combine multiple facts
-- State tracking: Entity locations change over time
-- Temporal ordering: Order of facts matters
-- Relational graph: Entities, objects, and locations form a knowledge graph
+**關鍵屬性**：
+- 測試關聯記憶：必須建立和檢索綁定
+- 可擴展：可以改變詞彙大小和配對數量
+- 關係性：配對之間的關係是關鍵資訊
 
 ---
 
-## Implementation Details
+### 任務 3：簡單 bAbI 風格 QA
 
-### Core Functions
+**功能**：追蹤實體及其位置/屬性隨時間變化，然後回答需要多跳推理的問題。
 
-1. **`generate_object_tracking()`**: Generates object tracking sequences
-2. **`generate_pair_matching()`**: Generates pair association sequences
-3. **`generate_babi_simple()`**: Generates QA sequences with facts
-4. **`create_train_test_split()`**: Splits data for training/testing
-5. **`create_batches()`**: Creates mini-batches with optional shuffling
-6. **`visualize_example()`**: Visualizes examples from each task type
+**為什麼需要關係推理**：
+- 必須同時追蹤多個實體
+- 必須隨時間更新實體狀態（位置變化）
+- 必須執行多跳推理（例如：「John 有球」+「John 在廚房」=「球在廚房」）
+- 需要理解實體-屬性-位置關係
 
-### Data Utilities
+**範例**：
+```
+事實：
+1. Entity0 去了 Loc3
+2. Entity2 去了 Loc3
+3. Entity2 去了 Loc3
+4. Entity0 去了 Loc3
+5. Entity2 拿了 Object
 
-- **Train/test splitting**: Configurable test ratio with reproducible seeding
-- **Batch creation**: Efficient mini-batch generation with shuffling
-- **Normalization**: Optional min-max or standard normalization
+問題：「Object 在哪裡？」
+答案：Loc3（因為 Entity2 有它且在 Loc3）
+```
 
-### Visualization
+**資料形狀**：
+- 輸入：`(n_samples, max_facts+1, n_entities+n_locations+3)`
+  - One-hot 實體 + 位置編碼
+  - 事實類型標記（移動 vs. 抓取）
+  - 問題標記
+- 輸出：`(n_samples, n_locations)` - one-hot 位置答案
 
-Each task has custom visualization showing:
-- **Input sequence heatmap**: Shows temporal structure
-- **Task-specific view**:
-  - Tracking: Object trajectories on grid
-  - Matching: Textual representation of pairs
-  - QA: Textual representation of facts and questions
-
----
-
-## Testing & Validation
-
-### Solvability Tests
-✓ All tasks verified to be deterministic and solvable
-✓ Output positions/answers match expected values from sequence
-✓ No random or inconsistent answers
-
-### Statistical Analysis
-- **Task 1**: Position distribution uniform across grid
-- **Task 2**: All vocabulary elements used, balanced distribution
-- **Task 3**: Location answers reasonably distributed
-
-### Complexity Scaling
-- **Task 1**: Complexity increases with number of objects
-- **Task 2**: Difficulty scales with vocabulary size
-- **Task 3**: Sequence length grows with number of facts
+**關鍵屬性**：
+- 多跳推理：必須組合多個事實
+- 狀態追蹤：實體位置隨時間變化
+- 時間順序：事實順序很重要
+- 關係圖：實體、物件和位置形成知識圖
 
 ---
 
-## Why These Tasks Require Relational Reasoning
+## 實作細節
 
-### 1. Cannot be solved by simple pattern matching
-- Answers depend on specific relationships in the sequence
-- Same input patterns can have different answers in different contexts
-- Requires maintaining structured representations
+### 核心函數
 
-### 2. Require explicit memory
-- Must remember information from earlier in sequence
-- Cannot rely solely on local context
-- Need to maintain multiple pieces of information simultaneously
+1. **`generate_object_tracking()`**：生成物件追蹤序列
+2. **`generate_pair_matching()`**：生成配對關聯序列
+3. **`generate_babi_simple()`**：生成帶有事實的 QA 序列
+4. **`create_train_test_split()`**：為訓練/測試分割資料
+5. **`create_batches()`**：建立帶有可選洗牌的 mini-batches
+6. **`visualize_example()`**：視覺化每種任務類型的範例
 
-### 3. Involve entity relationships
-- **Tracking**: Object-position relationships
-- **Matching**: Element-element bindings
-- **QA**: Entity-location-object relations
+### 資料工具
 
-### 4. Need temporal reasoning
-- Order of events matters
-- State changes over time
-- Must integrate information across timesteps
+- **訓練/測試分割**：可配置的測試比率，帶有可重現的種子
+- **批次建立**：帶洗牌的高效 mini-batch 生成
+- **正規化**：可選的 min-max 或標準正規化
 
----
+### 視覺化
 
-## Generated Files
-
-### Core Implementation
-- **`reasoning_tasks.py`**: Main implementation (690 lines)
-  - All 3 task generators
-  - Data utilities
-  - Visualization functions
-  - Built-in testing
-
-### Testing & Validation
-- **`test_reasoning_tasks.py`**: Extended testing (252 lines)
-  - Solvability demonstrations
-  - Statistical analysis
-  - Difficulty scaling analysis
-  - Multiple example generation
-
-### Visualizations
-- **`task_tracking_example.png`**: Object tracking visualization
-- **`task_matching_example.png`**: Pair matching visualization
-- **`task_babi_example.png`**: QA task visualization
-- **`task_difficulty_scaling.png`**: Complexity scaling plots
-- **`tracking_ex[1-3].png`**: Additional tracking examples
-- **`matching_ex[1-3].png`**: Additional matching examples
-- **`babi_ex[1-3].png`**: Additional QA examples
+每個任務都有自訂視覺化，顯示：
+- **輸入序列熱圖**：顯示時間結構
+- **任務特定視圖**：
+  - 追蹤：網格上的物件軌跡
+  - 匹配：配對的文字表示
+  - QA：事實和問題的文字表示
 
 ---
 
-## Usage Example
+## 測試與驗證
+
+### 可解性測試
+✓ 所有任務驗證為確定性且可解
+✓ 輸出位置/答案與序列的預期值匹配
+✓ 無隨機或不一致的答案
+
+### 統計分析
+- **任務 1**：位置分布在網格上均勻
+- **任務 2**：所有詞彙元素都被使用，分布平衡
+- **任務 3**：位置答案合理分布
+
+### 複雜度擴展
+- **任務 1**：複雜度隨物件數量增加
+- **任務 2**：難度隨詞彙大小擴展
+- **任務 3**：序列長度隨事實數量增長
+
+---
+
+## 為什麼這些任務需要關係推理
+
+### 1. 無法透過簡單模式匹配解決
+- 答案取決於序列中的特定關係
+- 相同的輸入模式在不同上下文中可能有不同答案
+- 需要維護結構化表示
+
+### 2. 需要明確的記憶
+- 必須記住序列中較早的資訊
+- 不能僅依賴局部上下文
+- 需要同時維護多條資訊
+
+### 3. 涉及實體關係
+- **追蹤**：物件-位置關係
+- **匹配**：元素-元素綁定
+- **QA**：實體-位置-物件關係
+
+### 4. 需要時間推理
+- 事件順序很重要
+- 狀態隨時間變化
+- 必須跨時間步驟整合資訊
+
+---
+
+## 生成的檔案
+
+### 核心實作
+- **`reasoning_tasks.py`**：主要實作（690 行）
+  - 所有 3 個任務生成器
+  - 資料工具
+  - 視覺化函數
+  - 內建測試
+
+### 測試與驗證
+- **`test_reasoning_tasks.py`**：擴展測試（252 行）
+  - 可解性展示
+  - 統計分析
+  - 難度擴展分析
+  - 多範例生成
+
+### 視覺化
+- **`task_tracking_example.png`**：物件追蹤視覺化
+- **`task_matching_example.png`**：配對匹配視覺化
+- **`task_babi_example.png`**：QA 任務視覺化
+- **`task_difficulty_scaling.png`**：複雜度擴展圖
+- **`tracking_ex[1-3].png`**：額外追蹤範例
+- **`matching_ex[1-3].png`**：額外匹配範例
+- **`babi_ex[1-3].png`**：額外 QA 範例
+
+---
+
+## 使用範例
 
 ```python
 from reasoning_tasks import (
@@ -231,55 +231,55 @@ from reasoning_tasks import (
     create_batches
 )
 
-# Generate datasets
+# 生成資料集
 X_track, y_track, meta_track = generate_object_tracking(n_samples=1000)
 X_match, y_match, meta_match = generate_pair_matching(n_samples=1000)
 X_qa, y_qa, meta_qa = generate_babi_simple(n_samples=1000)
 
-# Split into train/test
+# 分割為訓練/測試
 X_train, X_test, y_train, y_test = create_train_test_split(X_track, y_track)
 
-# Create batches for training
+# 為訓練建立批次
 for X_batch, y_batch in create_batches(X_train, y_train, batch_size=32):
-    # Train your model here
+    # 在這裡訓練您的模型
     pass
 ```
 
 ---
 
-## Next Steps
+## 後續步驟
 
-These datasets are ready to be used for:
+這些資料集已準備好用於：
 
-1. **Training LSTM baseline** (P3-T1)
-2. **Training Relational RNN** (P3-T2)
-3. **Comparing performance** (P4-T1)
-4. **Analyzing attention patterns** (P4-T2)
+1. **訓練 LSTM 基線**（P3-T1）
+2. **訓練 Relational RNN**（P3-T2）
+3. **比較效能**（P4-T1）
+4. **分析注意力模式**（P4-T2）
 
-The tasks are designed to be:
-- **Simple enough** to learn with reasonable compute
-- **Complex enough** to differentiate architectures
-- **Interpretable** for analysis and visualization
-- **Scalable** for difficulty adjustment
-
----
-
-## Quality Metrics
-
-✓ **All tests pass**: Shapes, values, and distributions verified
-✓ **Deterministic**: Same seed produces same data
-✓ **Balanced**: No obvious biases in answer distribution
-✓ **Varied**: Multiple examples show good diversity
-✓ **Documented**: Comprehensive comments and docstrings
-✓ **Visualized**: Clear plots for understanding tasks
+任務設計為：
+- **足夠簡單**以在合理的計算下學習
+- **足夠複雜**以區分架構
+- **可解釋**以便分析和視覺化
+- **可擴展**以調整難度
 
 ---
 
-## Conclusion
+## 品質指標
 
-Successfully implemented three distinct sequential reasoning tasks that require:
-- **Memory** to retain past events
-- **Relational reasoning** to bind entities and properties
-- **Temporal understanding** to process sequences correctly
+✓ **所有測試通過**：形狀、值和分布已驗證
+✓ **確定性**：相同種子產生相同資料
+✓ **平衡**：答案分布無明顯偏差
+✓ **多樣**：多個範例顯示良好的多樣性
+✓ **文件完善**：完整的註解和 docstrings
+✓ **視覺化**：清晰的圖表用於理解任務
 
-All tasks are deterministic, solvable, scalable, and ready for model training and evaluation.
+---
+
+## 結論
+
+成功實作了三個獨特的序列推理任務，需要：
+- **記憶**以保留過去事件
+- **關係推理**以綁定實體和屬性
+- **時間理解**以正確處理序列
+
+所有任務都是確定性的、可解的、可擴展的，並準備好進行模型訓練和評估。
