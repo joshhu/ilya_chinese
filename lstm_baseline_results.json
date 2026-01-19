@@ -1,0 +1,8 @@
+{
+  "object_tracking": {
+    "final_train_loss": 0.335025917471406,
+    "final_test_loss": 0.26941975651374656,
+    "epochs": 10,
+    "note": "Baseline evaluation - no gradient updates (demo only)"
+  }
+}

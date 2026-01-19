@@ -1,0 +1,13 @@
+{
+  "object_tracking": {
+    "final_train_loss": 0.2601341477625342,
+    "final_test_loss": 0.2593447728427769,
+    "epochs": 10,
+    "config": {
+      "num_slots": 4,
+      "slot_size": 32,
+      "num_heads": 2
+    },
+    "note": "Baseline evaluation - no gradient updates (demo only)"
+  }
+}
